@@ -10,7 +10,7 @@
     <script>
       window.analytics||(window.analytics=[]),window.analytics.methods=["identify","track","trackLink","trackForm","trackClick","trackSubmit","page","pageview","ab","alias","ready","group","on","once","off"],window.analytics.factory=function(t){return function(){var a=Array.prototype.slice.call(arguments);return a.unshift(t),window.analytics.push(a),window.analytics}};for(var i=0;i<window.analytics.methods.length;i++){var method=window.analytics.methods[i];window.analytics[method]=window.analytics.factory(method)}window.analytics.load=function(t){var a=document.createElement("script");a.type="text/javascript",a.async=!0,a.src=("https:"===document.location.protocol?"https://":"http://")+"d2dq2ahtl5zl1z.cloudfront.net/analytics.js/v1/"+t+"/analytics.min.js";var n=document.getElementsByTagName("script")[0];n.parentNode.insertBefore(a,n)},window.analytics.SNIPPET_VERSION="2.0.8",
       window.analytics.load("nkkww5j074");
-      window.analytics.page('Java Docs');
+      window.analytics.page('Docs', 'Java Client');
     </script>
   </head>
   <body>
@@ -62,6 +62,9 @@
       </h2>
       <ul>
         <li>
+          <a href="/examples/#listenable-future">Listenable Future</a>
+        </li>
+        <li>
           <a href="/examples/#data-access-object">DAO Pattern</a>
         </li>
         <li>
@@ -105,6 +108,18 @@
       
       <p>The examples below demonstrate how to integrate the Java client into a few of
        these patterns and frameworks.</p>
+      
+      <h2><a name="listenable-future"></a> Listenable Future</h2>
+      
+      <p>As well as using the <code>j.u.c.Future</code> to block when receiving the result of a
+       request to the Orchestrate service it&rsquo;s possible to use the client in a fully
+       non-blocking way (i.e. &ldquo;callback-style&rdquo;).</p>
+      <pre class="highlight java"><span class="kd">final</span> <span class="n">Client</span> <span class="n">client</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HttpClient</span><span class="o">(</span><span class="s">&quot;your api key&quot;</span><span class="o">);</span>&#x000A;<span class="kd">final</span> <span class="n">KvStoreOperation</span> <span class="n">kvStoreOp</span> <span class="o">=</span>&#x000A;        <span class="k">new</span> <span class="n">KvStoreOperation</span><span class="o">(</span><span class="s">&quot;collection&quot;</span><span class="o">,</span> <span class="s">&quot;key&quot;</span><span class="o">,</span> <span class="k">new</span> <span class="n">MyObj</span><span class="o">());</span>&#x000A;<span class="n">kvStoreOp</span><span class="o">.</span><span class="na">addListener</span><span class="o">(</span><span class="k">new</span> <span class="n">OrchestrateFutureListener</span><span class="o">&lt;</span><span class="n">KvMetadata</span><span class="o">&gt;()</span> <span class="o">{</span>&#x000A;    <span class="nd">@Override</span>&#x000A;    <span class="kd">public</span> <span class="kt">void</span> <span class="n">onComplete</span><span class="o">(</span><span class="kd">final</span> <span class="n">OrchestrateFuture</span><span class="o">&lt;</span><span class="n">KvMetadata</span><span class="o">&gt;</span> <span class="n">future</span><span class="o">)</span> <span class="o">{</span>&#x000A;        <span class="k">try</span> <span class="o">{</span>&#x000A;            <span class="kd">final</span> <span class="n">KvMetadata</span> <span class="n">kvMetadata</span> <span class="o">=</span> <span class="n">future</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>&#x000A;        <span class="o">}</span> <span class="k">catch</span><span class="o">(</span><span class="kd">final</span> <span class="n">Throwable</span> <span class="n">ignored</span><span class="o">)</span> <span class="o">{}</span>&#x000A;    <span class="o">}</span>&#x000A;    <span class="nd">@Override</span>&#x000A;    <span class="kd">public</span> <span class="kt">void</span> <span class="n">onException</span><span class="o">(</span><span class="kd">final</span> <span class="n">OrchestrateFuture</span><span class="o">&lt;</span><span class="n">KvMetadata</span><span class="o">&gt;</span> <span class="n">future</span><span class="o">)</span> <span class="o">{</span>&#x000A;        <span class="c1">// handle error condition</span>&#x000A;    <span class="o">}</span>&#x000A;<span class="o">});</span>&#x000A;<span class="n">client</span><span class="o">.</span><span class="na">execute</span><span class="o">(</span><span class="n">kvStoreOp</span><span class="o">);</span></pre>
+      <h4>Note</h4>
+      
+      <p>In the example above, it&rsquo;s still necessary to catch the checked exception
+       even though it will never be thrown in the <code>onComplete</code> method. This will be
+       improved in the next release.</p>
       
       <h2><a name="data-access-object"></a> Data Access Object (DAO) Pattern</h2>
       
@@ -159,7 +174,7 @@
       <pre class="highlight java"><span class="kn">import</span> <span class="nn">io.orchestrate.client.OrchestrateFuture</span><span class="o">;</span>&#x000A;<span class="kn">import</span> <span class="nn">io.orchestrate.client.OrchestrateFutureListener</span><span class="o">;</span>&#x000A;&#x000A;<span class="kd">public</span> <span class="kd">class</span> <span class="nc">MyObjectOperationListener</span>&#x000A;        <span class="kd">implements</span> <span class="n">OrchestrateFutureListener</span><span class="o">&lt;</span><span class="n">MyObject</span><span class="o">&gt;</span> <span class="o">{</span>&#x000A;&#x000A;    <span class="nd">@Override</span>&#x000A;    <span class="kd">public</span> <span class="kt">void</span> <span class="n">onComplete</span><span class="o">(</span><span class="kd">final</span> <span class="n">OrchestrateFuture</span><span class="o">&lt;</span><span class="n">MyObject</span><span class="o">&gt;</span> <span class="n">future</span><span class="o">)</span> <span class="o">{</span>&#x000A;    <span class="o">}</span>&#x000A;&#x000A;    <span class="nd">@Override</span>&#x000A;    <span class="kd">public</span> <span class="kt">void</span> <span class="n">onException</span><span class="o">(</span><span class="kd">final</span> <span class="n">OrchestrateFuture</span><span class="o">&lt;</span><span class="n">MyObject</span><span class="o">&gt;</span> <span class="n">future</span><span class="o">)</span> <span class="o">{</span>&#x000A;        <span class="cm">/* do something */</span>&#x000A;    <span class="o">}</span>&#x000A;&#x000A;<span class="o">}</span></pre>
       <p>You can read more about the <code>OrchestrateFutureListener</code> in the
        <a href="/javadoc/latest/io/orchestrate/client/OrchestrateFutureListener.html">javadocs</a>.</p>
-      <footer>Orchestrate.io &copy; 2013</footer>
+      <footer>Orchestrate.io &copy; 2014</footer>
     </div>
   </body>
 </html>
