@@ -113,7 +113,7 @@
       <p>Adding new features, optimising the performance of the platform and refining our
        efforts on the goal of providing developers all the query functionality you
        need to build large scale applications like Foursquare, Twitter and Facebook
-       with Orchestrate.io.</p>
+       with Orchestrate.</p>
       
       <p>We welcome all feedback you have about the service, no matter how small. We&rsquo;re
        especially interested in limitations you encounter that delay or prevent you
@@ -129,9 +129,9 @@
       
       <h2><a name="debugging-requests"></a> Debugging Requests</h2>
       
-      <p>When you <code>execute</code> a client operation, the library makes a HTTP request to the
-       Orchestrate platform. The service responds to the request with a response
-       containing an <code>X-Orchestrate-Req-Id</code> header. This helps us locate the HTTP
+      <p>When you call any of the Resource methods that return an OrchestrateRequest, the library
+       makes a HTTP request to the Orchestrate platform. The service responds to the request
+       with a response containing an <code>X-Orchestrate-Req-Id</code> header. This helps us locate the HTTP
        request information internally when debugging a problem.</p>
       
       <p>You can see this response information by enabling <code>INFO</code> level logging in the
