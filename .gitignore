@@ -27,3 +27,4 @@ classes
 *.out
 Icon?
 Thumbs.db
+/bin/

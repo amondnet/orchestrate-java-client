@@ -309,7 +309,7 @@ public class OrchestrateClient implements Client {
                 final int status = ((HttpResponsePacket) header).getStatus();
 
                 if (status == 201) {
-                    final String key = header.getHeader(Header.Location).split("/")[2];
+                    final String key = header.getHeader(Header.Location).split("/")[3];
                     final String ref = header.getHeader(Header.ETag)
                             .replace("\"", "")
                             .replace("-gzip", "");
