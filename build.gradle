@@ -14,19 +14,17 @@ version = '0.6.0-SNAPSHOT'
 def groovyVersion = 'groovy-2.1.8'
 def isReleaseVersion = !version.endsWith('SNAPSHOT')
 
-plugins.withType(JavaPlugin) {
-    sourceCompatibility = 1.6
-    targetCompatibility = 1.6
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
 
-    tasks.withType(Compile).all {
-        // enable all warnings as errors
-        options.compilerArgs = [
-            '-Xlint:cast,deprecation,divzero,empty,unchecked,fallthrough,path,serial,finally,overrides,-options',
-            '-Werror',
-            '-XprintProcessorInfo'
-        ]
-        options.encoding = "UTF-8"
-    }
+compileJava {
+    // enable all warnings as errors
+    options.compilerArgs = [
+        '-Xlint:cast,deprecation,divzero,empty,unchecked,fallthrough,path,serial,finally,overrides,-options',
+        '-Werror',
+        '-XprintProcessorInfo'
+    ]
+    options.encoding = "UTF-8"
 }
 
 repositories {
@@ -229,5 +227,5 @@ idea {
 }
 
 eclipse {
-    classpath { plusConfigurations += configurations.provided }
+    classpath { plusConfigurations += [configurations.provided] }
 }
