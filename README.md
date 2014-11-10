@@ -179,3 +179,4 @@ Many thanks to the following developers for contributing to the client:
 
 * Mårten Gustafson (@chids)
 * Henric Englund (@hnrc)
+* @chkan and Sport Archive (@sportarchive)
