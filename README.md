@@ -23,7 +23,7 @@ The client library is available on [Maven Central](http://search.maven.org/#sear
 
 ```groovy
 dependencies {
-    compile group: 'io.orchestrate', name: 'orchestrate-client', version: '0.5.0'
+    compile group: 'io.orchestrate', name: 'orchestrate-client', version: '0.5.1'
 }
 ```
 
@@ -33,7 +33,7 @@ dependencies {
 <dependency>
     <groupId>io.orchestrate</groupId>
     <artifactId>orchestrate-client</artifactId>
-    <version>0.5.0</version>
+    <version>0.5.1</version>
 </dependency>
 ```
 
@@ -56,6 +56,18 @@ Client client = OrchestrateClient.builder("your api key").build();
 // or (for convenience)
 Client client = new OrchestrateClient("your api key");
 ```
+
+#### Choosing a Data Center
+
+By default, the Orchestrate client uses 'AWS US East' as its host data center. To use another data center, for example 'AWS EU West', you can switch the host when creating the client:
+
+```java
+Client client = OrchestrateClient.builder("your api key")
+        .host("https://api.aws-eu-west-1.orchestrate.io")
+        .build();
+```
+
+For more information on Orchestrate's Multi Data Center features check out [the documentation](http://orchestrate.io/docs/multi-data-center).
 
 #### Fetching Key-Value Data
 

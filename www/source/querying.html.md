@@ -26,6 +26,21 @@ You construct a client using the `API key` for your `Application` which can be
 Client client = new OrchestrateClient("your api key");
 ```
 
+#### <a name="multi-data-center"></a> Choosing A Data Center
+
+By default, the Orchestrate client uses 'AWS US East' as its host data center. To use
+ another data center, for example 'AWS EU West', you can switch the host when creating
+ the client:
+
+```java
+Client client = OrchestrateClient.builder("your api key")
+    .host("https://api.aws-eu-west-1.orchestrate.io")
+    .build();
+```
+
+For more information on Orchestrate's Multi Data Center features check out
+ [the documentation](http://orchestrate.io/docs/multi-data-center).
+
 A `Client` can be shared across threads and you only need to construct one per
  Java application. For more advanced configuration options, check out
  [Tuning the Client](/advanced-options.html#tuning).
