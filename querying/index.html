@@ -124,6 +124,15 @@
        found in the <a href="https://dashboard.orchestrate.io/">Dashboard</a> (for help, see
        <a href="/#getting-started">here</a>).</p>
       <pre class="highlight java"><span class="c1">// An API key looks something like:</span>&#x000A;<span class="c1">//   3854bbd7-0a31-43b0-aa94-66236847a717</span>&#x000A;<span class="n">Client</span> <span class="n">client</span> <span class="o">=</span> <span class="k">new</span> <span class="n">OrchestrateClient</span><span class="o">(</span><span class="s">&quot;your api key&quot;</span><span class="o">);</span></pre>
+      <h4><a name="multi-data-center"></a> Choosing A Data Center</h4>
+      
+      <p>By default, the Orchestrate client uses &lsquo;AWS US East&rsquo; as its host data center. To use
+       another data center, for example &lsquo;AWS EU West&rsquo;, you can switch the host when creating
+       the client:</p>
+      <pre class="highlight java"><span class="n">Client</span> <span class="n">client</span> <span class="o">=</span> <span class="n">OrchestrateClient</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="s">&quot;your api key&quot;</span><span class="o">)</span>&#x000A;    <span class="o">.</span><span class="na">host</span><span class="o">(</span><span class="s">&quot;https://api.aws-eu-west-1.orchestrate.io&quot;</span><span class="o">)</span>&#x000A;    <span class="o">.</span><span class="na">build</span><span class="o">();</span></pre>
+      <p>For more information on Orchestrate&rsquo;s Multi Data Center features check out
+       <a href="http://orchestrate.io/docs/multi-data-center">the documentation</a>.</p>
+      
       <p>A <code>Client</code> can be shared across threads and you only need to construct one per
        Java application. For more advanced configuration options, check out
        <a href="/advanced-options/#tuning">Tuning the Client</a>.</p>
