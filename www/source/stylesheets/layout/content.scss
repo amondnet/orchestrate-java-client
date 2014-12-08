@@ -26,6 +26,19 @@
     a {
       color: #333333;
     }
+    a:first-child {
+      color: #cc0088;
+    }
+    a:first-child:before {
+      content: "#";
+    }
+  }
+  h4 {
+    margin: 30px 0 10px 0;
+    font: italic 16px Georgia, serif;
+    a {
+      color: #666666;
+    }
   }
   p {
     margin: 0 0 10px 0;

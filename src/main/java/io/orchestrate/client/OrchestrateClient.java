@@ -24,7 +24,6 @@ import org.glassfish.grizzly.http.*;
 import org.glassfish.grizzly.http.util.Header;
 import org.glassfish.grizzly.http.util.HttpStatus;
 import org.glassfish.grizzly.http.util.UEncoder;
-import org.glassfish.grizzly.impl.SafeFutureImpl;
 import org.glassfish.grizzly.memory.ByteBufferWrapper;
 import org.glassfish.grizzly.nio.NIOTransport;
 import org.glassfish.grizzly.nio.transport.TCPNIOTransportBuilder;
@@ -39,7 +38,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static io.orchestrate.client.Preconditions.*;

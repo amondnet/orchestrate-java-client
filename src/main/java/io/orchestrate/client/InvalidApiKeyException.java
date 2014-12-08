@@ -15,6 +15,8 @@
  */
 package io.orchestrate.client;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 /**
  * The InvalidApiKeyException is thrown on any client request when the
  * Orchestrate Api Key is invalid. For example, calling the (blocking)
@@ -65,7 +67,7 @@ package io.orchestrate.client;
  */
 @SuppressWarnings("serial")
 public class InvalidApiKeyException extends RequestException {
-    InvalidApiKeyException(int statusCode, String message, String requestId) {
-        super(statusCode, message, requestId);
+    InvalidApiKeyException(int statusCode, JsonNode json, String rawResponse, String requestId) {
+        super(statusCode, json, rawResponse, requestId);
     }
 }

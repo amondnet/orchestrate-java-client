@@ -1,6 +1,6 @@
 > Feedback is the breakfast of champions. <cite>Ken Blanchard</cite>
 
-## <a name="feature-proposals"></a> Feature Proposals
+## <a name="feature-proposals"></a> [Feature Proposals](#feature-proposals)
 
 We're constantly improving the Orchestrate.io service.
 
@@ -21,7 +21,7 @@ You can also request new features or vote for an existing one via our UserVoice:
 
 [http://support.orchestrate.io/](http://support.orchestrate.io/)
 
-## <a name="debugging-requests"></a> Debugging Requests
+## <a name="debugging-requests"></a> [Debugging Requests](#debugging-requests)
 
 When you call any of the Resource methods that return an OrchestrateRequest, the library
  makes a HTTP request to the Orchestrate platform. The service responds to the request
@@ -51,7 +51,7 @@ You can see this response information by enabling `INFO` level logging in the
 If you believe you've found a bug in the service, please open an issue (see below)
  and mention the `X-Orchestrate-Req-Id` in it if possible. Thanks. `:)`
 
-## <a name="issues"></a> Issues
+## <a name="issues"></a> [Issues](#issues)
 
 The codebase is managed on [GitHub](https://github.com/orchestrate-io/orchestrate-java-client),
  we also use their issue tracker to manage bug reporting. If you find a bug

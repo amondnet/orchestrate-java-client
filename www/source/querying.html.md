@@ -10,7 +10,7 @@ Every Key/Value object has a unique identifier that represents the current
  content-based hash that identifies the specific version of a value. With
  refs, you can track the history of an object and retrieve old versions.
 
-### <a name="constructing-a-client"></a> Constructing a Client
+### <a name="constructing-a-client"></a> [Constructing a Client](#constructing-a-client)
 
 A `Client` object is the starting point for making requests to the
  Orchestrate.io service, it manages the connection pool and makes `HTTP`
@@ -26,7 +26,7 @@ You construct a client using the `API key` for your `Application` which can be
 Client client = new OrchestrateClient("your api key");
 ```
 
-#### <a name="multi-data-center"></a> Choosing A Data Center
+#### <a name="multi-data-center"></a> [Choosing A Data Center](#multi-data-center)
 
 By default, the Orchestrate client uses 'AWS US East' as its host data center. To use
  another data center, for example 'AWS EU West', you can switch the host when creating
@@ -45,7 +45,7 @@ A `Client` can be shared across threads and you only need to construct one per
  Java application. For more advanced configuration options, check out
  [Tuning the Client](/advanced-options.html#tuning).
 
-### Stopping a Client
+### <a name="stopping-client"></a> [Stopping a Client](#stopping-client)
 
 Sometimes it's necessary to release the resources used by a `Client` and
  reconstruct it again at some later stage.
@@ -57,7 +57,7 @@ client.close();
 client.kv("someCollection", "someKey").get(String.class).get();
 ```
 
-## <a name="a-sync-api"></a> Blocking vs Non-Blocking API
+## <a name="async-api"></a> [Blocking vs Non-Blocking API](#async-api)
 
 Any Resource method that returns an OrchestrateRequest will initiate an asynchronous
  http request to the Orchestrate service. For example:
@@ -118,7 +118,7 @@ DomainObject object = client.kv("someCollection", "someKey")
       .get();
 ```
 
-## <a name="key-value"></a> Key-Value
+## <a name="key-value"></a> [Key-Value](#key-value)
 
 Key-Value operations are the heart of the Orchestrate.io service. These are the
  most common operations you'll perform and is the primary way of storing data.
@@ -129,7 +129,7 @@ All Key-Value operations happen in the context of a `Collection`. If the
 
 As mentioned above, all client operations are _asynchronous_.
 
-### <a name="fetch-data"></a> Fetch Data
+### <a name="fetch-data"></a> [Fetch Data](#fetch-data)
 
 To fetch an object from a `collection` with a given `key`.
 
@@ -152,7 +152,22 @@ This example shows how to retrieve the value for a key from a collection and
  deserialize the result JSON to a [POJO](http://en.wikipedia.org/wiki/Plain_Old_Java_Object)
  called `object`.
 
-### <a name="list-data"></a> List Data
+#### <a name="fetch-data-by-ref"></a> [Fetch Data by Ref](#fetch-data-by-ref)
+
+To fetch an object from a `collection` with a given `key` and specific `ref`. This
+is useful for fetching old versions of an Item.
+
+```java
+KvObject<DomainObject> object =
+        client.kv("someCollection", "someKey")
+              .get(DomainObject.class, "someRef")
+              .get();
+
+DomainObject data = kvObject.getValue();
+// do something with the 'data'
+```
+
+### <a name="list-data"></a> [List Data](#list-data)
 
 To list objects in a `collection`.
 
@@ -186,7 +201,7 @@ KvList<DomainObject> results =
               .get();
 ```
 
-### <a name="store-data"></a> Store Data
+### <a name="store-data"></a> [Store Data](#store-data)
 
 To store (add OR update) an object to a `collection` and a given `key`.
 
@@ -213,22 +228,7 @@ The `KvMetadata` returned by the store operation contains information about
  where the information has been stored and the version (`ref`) it's been written
  with.
 
-### <a name="fetch-data-by-ref"></a> Fetch Data by Ref
-
-To fetch an object from a `collection` with a given `key` and specific `ref`. This
-is useful for fetching old versions of an Item.
-
-```java
-KvObject<DomainObject> object =
-        client.kv("someCollection", "someKey")
-              .get(DomainObject.class, "someRef")
-              .get();
-
-DomainObject data = kvObject.getValue();
-// do something with the 'data'
-```
-
-#### <a name="conditional-store"></a> Conditional Store
+#### <a name="conditional-store"></a> [Conditional Store](#conditional-store)
 
 The `ref` metadata returned from a store operation is important, it allows
  you to perform a "Conditional PUT".
@@ -253,7 +253,7 @@ This type of store operation is very useful in high write concurrency
  environments. It provides a pre-condition that must be `true` for the store
  operation to succeed.
 
-#### <a name="server-generated-keys"></a> Store with Server-Generated Keys
+#### <a name="server-generated-keys"></a> [Store with Server-Generated Keys](#server-generated-keys)
 
 With some types of data you'll store to Orchestrate you may want to have the
  service generate keys for the values for you. This is similar to using the
@@ -265,7 +265,182 @@ To store a value to a collection with a server-generated key:
 KvMetadata kvMetadata = client.postValue("someCollection", obj).get();
 ```
 
-### <a name="delete-data"></a> Delete Data
+### <a name="partial-update-data"></a> [Partial Update Data](#partial-update-data)
+
+To update only a portion of an item (eg to update a few fields).
+
+```java
+final KvMetadata kvMetadata =
+    client.kv("someCollection", "someKey")
+        .patch(JsonPatch.builder()
+            .add("name", "James")
+            .move("description", "profile.description")
+            .build()
+        )
+        .get();
+
+// print the 'ref' for the stored data
+System.out.println(kvMetadata.getRef());
+```
+
+This operation allows for updating a portion of a document by applying a
+ list of operations. Each of the operations will be applied to the specified
+ document in order. If any of the operations fails for any reason, then the
+ patch is aborted, and none of the changes are applied.
+ The response metadata will contain the new 'ref' for the updated item. For
+ a full list of supported Ops, see the JsonPatch [Javadocs](/javadoc/latest/io/orchestrate/client/jsonpatch/JsonPatch.html).
+.
+
+#### <a name="conditional-partial-update-data"></a> [Conditional Partial Update Data](#conditional-partial-update-data)
+This patch operation also supports the ifMatch conditional. When updating
+ individual fields, it is recommended that you keep the 'ref' of the item
+ you are modifying. Then, when sending the update, provide the original 'ref'
+ to insure the updates are being applied to the expected version.
+
+```java
+final KvMetadata kvMetadata =
+    client.kv("someCollection", "someKey")
+        .ifMatch("someRef")
+        .patch(JsonPatch.builder()
+            .add("name", "James")
+            .move("description", "profile.description")
+            .build()
+        )
+        .get();
+
+// print the 'ref' for the stored data
+System.out.println(kvMetadata.getRef());
+```
+
+#### <a name="test-operation"></a> [Test Operation](#test-operation)
+One of the JsonPatch ops available is the 'test' op. This op deserves special
+ mention. The 'test' op provides a way to indicate a field value based precondition
+ for the patch operation. The operations will be applied to the document in
+ the order specified. If any 'test' op fails, the entire patch is aborted, and
+ NONE of the ops will be 'committed' to the store.
+
+```java
+try {
+    final KvMetadata kvMetadata =
+        client.kv("someCollection", "someKey")
+             .ifMatch("someRef")
+             .patch(JsonPatch.builder()
+                 .test("name", "Some Name")
+                 .add("name", "Some Other Name")
+                 .build()
+             )
+             .get();
+
+    // print the 'ref' for the stored data
+    System.out.println(kvMetadata.getRef());
+} catch (TestOpApplyException ex) {
+   // the patch failed to apply due to a 'test' op failure.
+   System.out.println("Test op at index " + ex.getOpIndex() + " failed. Data: "+ex.getDetails().toString());
+} catch (PatchConflictException ex) {
+   // the patch failed to apply due to one of the 'path's
+   // specified in one of the ops does not exist (ie it may have
+   // been removed by another update of the item).
+   System.out.println("Patch Op at index " + ex.getOpIndex() + " failed. Data: "+ex.getDetails().toString());
+}
+```
+
+#### <a name="merge-update-data"></a> [Merge Update Data](#merge-update-data)
+
+To update an Item by merging it with another (via a JsonMergePatch
+ https://tools.ietf.org/html/rfc7386).
+
+```java
+final KvMetadata kvMetadata =
+    client.kv("someCollection", "someKey")
+        .merge(someJsonString)
+        .get();
+
+// print the 'ref' for the stored data
+System.out.println(kvMetadata.getRef());
+```
+
+This operation allows for updating a JSON document by merging it with
+another JSON document that contains new values to apply to the original.
+
+The usefulness of this method in the Java client is likely limited to only
+command line type utilities that are processing sets of changes
+from other sources (otherwise, it is unlikely a normal Java domain object
+will be only partially populated). Due to this limited utility, this
+method only takes a JSON string. Please provide feedback if your use case
+does not fit this assumption.
+
+#### <a name="conditional-merge-update-data"></a> [Conditional Merge Update Data](#conditional-merge-update-data)
+This merge operation also supports the ifMatch conditional. When merging
+json documents, it is recommended that you keep the 'ref' of the item
+you are modifying. Then, when sending the update, provide the original 'ref'
+to insure the updates are being applied to the expected version.
+
+```java
+final KvMetadata kvMetadata =
+    client.kv("someCollection", "someKey")
+        .ifMatch("someRef")
+        .merge(someJsonString)
+        .get();
+
+// print the 'ref' for the stored data
+System.out.println(kvMetadata.getRef());
+```
+
+#### <a name="conditional-update-failures"></a> [Conditional Partial Update Failures](#conditional-update-failures)
+When a conditional partial update (either patch or merge) fails, NONE of the operations
+are applied. The failure indicates that the precondition failed (ie the item has been
+modified since the provided ref). This failure is reflected in the client by an exception
+being thrown.
+
+```java
+try {
+    final KvMetadata kvMetadata =
+        client.kv("someCollection", "someKey")
+            .ifMatch("someRef")
+            .patch(JsonPatch.builder()
+                .add("name", "James")
+                .move("description", "profile.description")
+                .build()
+            )
+            .get();
+} catch (PatchConflictException ex) {
+   // the patch failed to apply due to either a 'test' failure or
+   // one of the 'path's specified in one of the ops does not exist
+   // (ie it may have been removed by another update of the item).
+   System.out.println("Patch Op at index " + ex.getOpIndex() +
+        " failed. Data: "+ex.getDetails().toString());
+} catch (ItemVersionMismatchException ex) {
+   // patch failed to apply because the refs do not match
+}
+
+```
+
+If an item key is updated VERY frequently, then there is a chance that a patch request for
+that key could result in a ItemVersionMismatchException, even if it was not sent
+with an ifMatch header.
+
+```java
+try {
+    final KvMetadata kvMetadata =
+        client.kv("someCollection", "someKey")
+            .patch(JsonPatch.builder()
+                .add("name", "James")
+                .move("description", "profile.description")
+                .build()
+            )
+            .get();
+} catch (PatchConflictException ex) {
+   // the patch failed to apply due to either a 'test' failure or
+   // one of the 'path's specified in one of the ops does not exist
+   // (ie it may have been removed by another update of the item).
+} catch (ItemVersionMismatchException ex) {
+   // patch failed to apply due to too many other requests to
+   // update the same item key
+}
+
+```
+
+### <a name="delete-data"></a> [Delete Data](#delete-data)
 
 To delete a `collection` of objects.
 
@@ -292,7 +467,7 @@ if (result) {
 }
 ```
 
-#### <a name="conditional-delete"></a> Conditional Delete
+#### <a name="conditional-delete"></a> [Conditional Delete](#conditional-delete)
 
 Similar to a [conditional store](#conditional-store) operation, a conditional
  delete provides a pre-condition that must be `true` for the operation to
@@ -312,7 +487,7 @@ boolean result =
 The object with the key `someKey` will be deleted if and only if the
  `currentRef` matches the current ref for the object on the server.
 
-#### <a name="purge-kv-data"></a> Purge Data
+#### <a name="purge-kv-data"></a> [Purge Data](#purge-kv-data)
 
 The Orchestrate service is built on the principle that all data is immutable,
  every change made to an object is stored as a new object with a different "ref".
@@ -334,7 +509,7 @@ if (result) {
 }
 ```
 
-## <a name="search"></a> Search
+## <a name="search"></a> [Search](#search)
 
 A powerful feature of the Orchestrate.io service is the search functionality;
  when an object is written to the platform the data will be semantically indexed
@@ -398,7 +573,7 @@ SearchResults<DomainObject> results =
 // same as above
 ```
 
-### Note
+#### <a name="query-note"></a> [Note](#query-note)
 
 Search results are currently limited to no more than __100__ results for each
  query, if this limit is not suitable for you please let us know.
@@ -406,7 +581,7 @@ Search results are currently limited to no more than __100__ results for each
 By default, a search operation will only return up to __10__ results, use the
  `CollectionSearchResource` as shown above to retrieve more results for a query.
 
-### Some Example Queries
+#### <a name="query-examples"></a> [Some Example Queries](#query-examples)
 
 Here are some query examples demonstrating the Lucene query syntax.
 
@@ -436,7 +611,7 @@ SearchResults<DomainObject> results =
 Ignore the backslashes in the first two examples, this is necessary to escape
  the quotes in the Java string literal.
 
-## <a name="events"></a> Events
+## <a name="events"></a> [Events](#events)
 
 In the Orchestrate.io service, an event is a time ordered piece of data you want
  to store in the context of a key. This specialist storage type exists because
@@ -446,7 +621,7 @@ Some examples of types of objects you'd want to store as events are; comments
  that belong to a blog article, items in a user's news feed from a social
  network, or billing history from a customer.
 
-### <a name="fetch-events"></a> Fetch Events
+### <a name="fetch-events"></a> [Fetch Events](#fetch-events)
 
 To fetch events belonging to a `key` in a specific `collection` of a specific
  `type`, where type could be a name like "comments" or "feed".
@@ -479,7 +654,23 @@ Iterable<Event<DomainObject>> results =
 // same as above
 ```
 
-### <a name="store-event"></a> Store Event
+#### <a name="fetch-single-event"></a> [Fetch Single Event](#fetch-single-event)
+
+To fetch an individual event instance.
+
+```java
+Event<DomainObject> event =
+        client.event("someCollection", "someKey")
+              .type("eventType")
+              .timestamp(someTimestamp)
+              .ordinal(someOrdinal)
+              .get(DomainObject.class)
+              .get();
+
+System.out.println(event.getRef());
+```
+
+### <a name="store-event"></a> [Store Event](#store-event)
 
 You can think of storing an event like adding to the front of a time-ordered
  immutable list of objects.
@@ -488,15 +679,14 @@ To store an event to a `key` in a `collection` with a specific `type`.
 
 ```java
 DomainObject obj = new DomainObject(); // a POJO
-boolean result =
+EventMetadata result =
         client.event("someCollection", "someKey")
               .type("eventType")
-              .put(obj)
+              .create(obj)
               .get();
 
-if (result) {
-    System.out.println("Successfully stored an event.");
-}
+// Print the timestamp and ordinal of the newly created event
+System.out.println(result.getTimestamp() + ", "+result.getOrdinal());
 ```
 
 You can also supply an optional `timestamp` for the event, this will be used
@@ -507,13 +697,199 @@ DomainObject obj = new DomainObject(); // a POJO
 boolean result =
         client.event("someCollection", "someKey")
               .type("eventType")
-              .put(obj, 13865200L)
+              .timestamp(13865200L)
+              .create(obj)
               .get();
 
-// same as above
+// Print the timestamp and ordinal of the newly created event
+System.out.println(result.getTimestamp() + ", "+result.getOrdinal());
 ```
 
-## <a name="graph"></a> Graph
+### <a name="update-event"></a> [Update Event](#update-event)
+
+To update an Event to a new version.
+
+```java
+DomainObject updatedObj = new DomainObject(); // a POJO
+final EventMetadata eventMetadata =
+    client.event("someCollection", "someKey")
+        .type("eventType")
+        .timestamp(someTimestamp)
+        .ordinal(someOrdinal)
+        .update(updatedObj)
+        .get();
+
+// print the 'ref' for the updated event
+System.out.println(eventMetadata.getRef());
+```
+
+This operation allows for updating an Event by sending in an updated value
+ for the Event.
+
+
+#### <a name="conditional-update-event"></a> [Conditional Update Event](#conditional-update-event)
+
+To update an Event to a new version but only if the ref of the Event being updated matches
+the provided value. This insures that the update is being applied to the expected version.
+
+```java
+final Event<DomainObject> currentEvent =
+        client.event("someCollection", "someKey")
+              .type("eventType")
+              .timestamp(someTimestamp)
+              .ordinal(someOrdinal)
+              .get(DomainObject.class)
+              .get();
+
+final EventMetadata updatedMeta =
+    client.event("someCollection", "someKey")
+        .type("eventType")
+        .timestamp(someTimestamp)
+        .ordinal(someOrdinal)
+        .ifMatch(currentEvent.getRef())
+        .update(updatedObj)
+        .get();
+
+// print the 'ref' for the updated event
+System.out.println(updatedMeta.getRef());
+```
+
+This operation allows for updating an Event by sending in an updated value
+ for the Event.
+
+### <a name="partial-update-event"></a> [Partial Update Event](#partial-update-event)
+
+To update only a portion of an Event (eg to update a few fields).
+
+```java
+final EventMetadata eventMetadata =
+    client.event("someCollection", "someKey")
+        .type("eventType")
+        .timestamp(someTimestamp)
+        .ordinal(someOrdinal)
+        .patch(JsonPatch.builder()
+            .add("name", "James")
+            .move("description", "profile.description")
+            .build()
+        )
+        .get();
+
+// print the 'ref' for the updated event
+System.out.println(eventMetadata.getRef());
+```
+
+This operation allows for updating a portion of an Event by applying a
+ list of operations. Each of the operations will be applied to the specified
+ event in order. If any of the operations fails for any reason, then the
+ patch is aborted, and none of the changes are applied.
+ The response metadata will contain the new 'ref' for the updated event. For
+ a full list of supported Ops, see the JsonPatch [Javadocs](/javadoc/latest/io/orchestrate/client/jsonpatch/JsonPatch.html).
+
+#### <a name="conditional-partial-update-event"></a> [Conditional Partial Update Event](#conditional-partial-update-event)
+This patch operation also supports the ifMatch conditional. When updating
+ individual fields, it is recommended that you keep the 'ref' of the event
+ you are modifying. Then, when sending the update, provide the original 'ref'
+ to insure the updates are being applied to the expected version.
+
+```java
+final EventMetadata eventMetadata =
+    client.event("someCollection", "someKey")
+        .type("eventType")
+        .timestamp(someTimestamp)
+        .ordinal(someOrdinal)
+        .ifMatch("someRef")
+        .patch(JsonPatch.builder()
+            .add("name", "James")
+            .move("description", "profile.description")
+            .build()
+        )
+        .get();
+
+// print the 'ref' for the updated event
+System.out.println(eventMetadata.getRef());
+```
+
+#### <a name="merge-update-event"></a> [Merge Update Event](#merge-update-event)
+
+To update an Event by merging it with another (via a JsonMergePatch
+ https://tools.ietf.org/html/rfc7386).
+
+```java
+final EventMetadata eventMetadata =
+    client.event("someCollection", "someKey")
+        .type("eventType")
+        .timestamp(someTimestamp)
+        .ordinal(someOrdinal)
+        .merge(someJsonString)
+        .get();
+
+// print the 'ref' for the updated event
+System.out.println(eventMetadata.getRef());
+```
+
+This operation allows for updating an event's JSON document by merging it with
+another JSON document that contains new values to apply to the original.
+
+The usefulness of this method in the Java client is likely limited to only
+command line type utilities that are processing sets of changes
+from other sources (otherwise, it is unlikely a normal Java domain object
+will be only partially populated). Due to this limited utility, this
+method only takes a JSON string. Please provide feedback if your use case
+does not fit this assumption.
+
+#### <a name="conditional-merge-update-event"></a> [Conditional Merge Update Event](#conditional-merge-update-event)
+This merge operation also supports the ifMatch conditional. When merging
+json documents, it is recommended that you keep the 'ref' of the event
+you are modifying. Then, when sending the update, provide the original 'ref'
+to insure the updates are being applied to the expected version.
+
+```java
+final EventMetadata eventMetadata =
+    client.event("someCollection", "someKey")
+        .type("eventType")
+        .timestamp(someTimestamp)
+        .ordinal(someOrdinal)
+        .ifMatch("someRef")
+        .merge(someJsonString)
+        .get();
+
+// print the 'ref' for the updated event
+System.out.println(eventMetadata.getRef());
+```
+### <a name="delete-event"></a> [Delete Event](#delete-event)
+
+To delete an individual Event instance
+
+```java
+final Boolean purged =
+    client.event("someCollection", "someKey")
+        .type("eventType")
+        .timestamp(someTimestamp)
+        .ordinal(someOrdinal)
+        .purge()
+        .get();
+```
+
+#### <a name="conditional-delete-event"></a> [Conditional Delete Event](#conditional-delete-event)
+
+To delete an individual Event instance, but only if the current version is the expected ref.
+
+```java
+try {
+    final Boolean purged =
+        client.event("someCollection", "someKey")
+            .type("eventType")
+            .timestamp(someTimestamp)
+            .ordinal(someOrdinal)
+            .ifMatch(someRef)
+            .purge()
+            .get();
+} catch (ItemVersionMismatchException ex) {
+   // the ref did not match.
+}
+```
+
+## <a name="graph"></a> [Graph](#graph)
 
 While building an application it's possible that you'll want to make associations
  between particular objects of the same type or even objects of completely
@@ -527,7 +903,7 @@ A graph query is the right choice when you have a starting object that you want
  search from to follow relevant relationships and accumulate interesting
  information.
 
-### <a name="fetch-relations"></a> Fetch Relations
+### <a name="fetch-relations"></a> [Fetch Relations](#fetch-relations)
 
 To fetch objects related to the `key` in the `collection` based on a
  relationship or number of `relation`s.
@@ -556,7 +932,7 @@ Iterable<KvObject<DomainObject>> results =
 // same as above
 ```
 
-### <a name="store-relation"></a> Store Relation
+### <a name="store-relation"></a> [Store Relation](#store-relation)
 
 To store a `relation` between one `key` to another `key` within the same
  `collection` or across different `collection`s.
@@ -573,7 +949,7 @@ if (result) {
 }
 ```
 
-#### Note
+#### <a name="graph-note"></a> [Note](#graph-note)
 
 Relationships in Orchestrate are uni-directional, to define a bi-directional
  relation you must swap the `collection` <-> `toCollection` and `key` <-> `toKey`
@@ -581,7 +957,7 @@ Relationships in Orchestrate are uni-directional, to define a bi-directional
 
 We may lift this restriction in a future release of the client.
 
-### <a name="purge-relation"></a> Purge Relation
+### <a name="purge-relation"></a> [Purge Relation](#purge-relation)
 
 To purge a `relation` between one `key` to another `key` within the same
  `collection` or across different `collection`s.

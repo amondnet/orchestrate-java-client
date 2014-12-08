@@ -15,6 +15,7 @@
  */
 package io.orchestrate.client;
 
+import io.orchestrate.client.jsonpatch.JsonPatch;
 import lombok.NonNull;
 import org.glassfish.grizzly.http.*;
 import org.glassfish.grizzly.http.util.Header;
@@ -252,4 +253,77 @@ public class KvResource extends BaseResource {
         });
     }
 
+    public OrchestrateRequest<KvMetadata> patch(JsonPatch patchOps) {
+        final byte[] content = toJsonBytes(patchOps.getOps());
+
+        final String uri = client.uri(collection, key);
+
+        final HttpRequestPacket.Builder httpHeaderBuilder = HttpRequestPacket.builder()
+                .method(Method.PATCH)
+                .contentType("application/json-patch+json")
+                .uri(uri);
+        if (objectRef != null) {
+            httpHeaderBuilder.header(Header.IfMatch, "\"".concat(objectRef).concat("\""));
+        } else if (ifAbsent) {
+            throw new IllegalStateException("Cannot perform an ifAbsent PATCH request.");
+        }
+        httpHeaderBuilder.contentLength(content.length);
+
+        final HttpContent packet = httpHeaderBuilder.build()
+                .httpContentBuilder()
+                .content(new ByteBufferWrapper(ByteBuffer.wrap(content)))
+                .build();
+        return new OrchestrateRequest<KvMetadata>(client, packet, new ResponseConverter<KvMetadata>() {
+            @Override
+            public KvMetadata from(final HttpContent response) throws IOException {
+                final HttpHeader header = response.getHttpHeader();
+                final int status = ((HttpResponsePacket) header).getStatus();
+
+                if (status == 201) {
+                    final String ref = header.getHeader(Header.ETag)
+                            .replace("\"", "")
+                            .replace("-gzip", "");
+                    return new KvMetadata(collection, key, ref);
+                }
+                return null;
+            }
+        });
+    }
+
+    public OrchestrateRequest<KvMetadata> merge(String jsonObject) {
+        final byte[] content = toJsonBytes(jsonObject);
+
+        final String uri = client.uri(collection, key);
+
+        final HttpRequestPacket.Builder httpHeaderBuilder = HttpRequestPacket.builder()
+                .method(Method.PATCH)
+                .contentType("application/merge-patch+json")
+                .uri(uri);
+        if (objectRef != null) {
+            httpHeaderBuilder.header(Header.IfMatch, "\"".concat(objectRef).concat("\""));
+        } else if (ifAbsent) {
+            throw new IllegalStateException("Cannot perform an ifAbsent PATCH request.");
+        }
+        httpHeaderBuilder.contentLength(content.length);
+
+        final HttpContent packet = httpHeaderBuilder.build()
+                .httpContentBuilder()
+                .content(new ByteBufferWrapper(ByteBuffer.wrap(content)))
+                .build();
+        return new OrchestrateRequest<KvMetadata>(client, packet, new ResponseConverter<KvMetadata>() {
+            @Override
+            public KvMetadata from(final HttpContent response) throws IOException {
+                final HttpHeader header = response.getHttpHeader();
+                final int status = ((HttpResponsePacket) header).getStatus();
+
+                if (status == 201) {
+                    final String ref = header.getHeader(Header.ETag)
+                            .replace("\"", "")
+                            .replace("-gzip", "");
+                    return new KvMetadata(collection, key, ref);
+                }
+                return null;
+            }
+        });
+    }
 }

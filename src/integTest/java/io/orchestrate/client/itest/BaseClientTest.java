@@ -21,6 +21,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -41,7 +42,24 @@ public abstract class BaseClientTest {
             throw new IllegalStateException("Cannot run integration tests, 'apiKey' is blank.");
         }
 
-        client = OrchestrateClient.builder(apiKey).build();
+        URI uri = URI.create(System.getProperty("orchestrate.host", OrchestrateClient.Builder.DEFAULT_HOST));
+
+        String host = uri.getScheme()+"://" + uri.getHost();
+        int port = uri.getPort();
+        if(port == -1) {
+            if( uri.getScheme().equals("https")) {
+                port = 443;
+            } else {
+                port = 80;
+            }
+        }
+        boolean ssl = uri.getScheme().equals("https");
+
+        client = OrchestrateClient.builder(apiKey)
+                .host(host)
+                .port(port)
+                .useSSL(ssl)
+                .build();
     }
 
     @AfterClass

@@ -17,10 +17,8 @@ package io.orchestrate.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.NonNull;
-import org.glassfish.grizzly.http.HttpContent;
-import org.glassfish.grizzly.http.HttpRequestPacket;
-import org.glassfish.grizzly.http.HttpResponsePacket;
-import org.glassfish.grizzly.http.Method;
+import org.glassfish.grizzly.http.*;
+import org.glassfish.grizzly.http.util.Header;
 import org.glassfish.grizzly.memory.ByteBufferWrapper;
 
 import javax.annotation.Nullable;
@@ -49,6 +47,8 @@ public class EventResource extends BaseResource {
     private Long start;
     /** The timestamp to get events up to. */
     private Long end;
+
+    private Long timestamp;
 
     EventResource(final OrchestrateClient client,
                   final JacksonMapper mapper,
@@ -120,16 +120,7 @@ public class EventResource extends BaseResource {
                 final Iterator<JsonNode> iter = jsonNode.get("results").elements();
                 while (iter.hasNext()) {
                     final JsonNode result = iter.next();
-
-                    final long timestamp = result.get("timestamp").asLong();
-                    final String ordinal = result.get("ordinal").asText();
-
-                    final JsonNode valueNode = result.get("value");
-                    final String rawValue = valueNode.toString();
-
-                    final T value = toDomainObject(rawValue, clazz);
-
-                    events.add(new Event<T>(value, rawValue, timestamp, ordinal));
+                    events.add(ResponseConverterUtil.wrapperJsonToEvent(mapper, result, clazz));
                 }
                 return new EventList<T>(events);
             }
@@ -139,8 +130,11 @@ public class EventResource extends BaseResource {
 
     /**
      * {@link #put(Object, Long)}.
+     * @deprecated Use {@link #create(Object)} for adding new events, and SingleEventResource's 'update'
+     *  (via {@link #ordinal(Long)}) for updating existing event instances.
      */
     public OrchestrateRequest<Boolean> put(final @NonNull Object value) {
+        // Does NOT refer to current 'timestamp' because that is not how legacy worked (pre-deprecation).
         return put(value, null);
     }
 
@@ -162,6 +156,8 @@ public class EventResource extends BaseResource {
      * @param value The object to store as the event.
      * @param timestamp The timestamp to store the event at.
      * @return The prepared put request.
+     * @deprecated Use {@link #create(Object)} for adding new events, and SingleEventResource's 'update'
+     *  (via {@link #ordinal(Long)}) for updating existing event instances.
      */
     public OrchestrateRequest<Boolean> put(
             final @NonNull Object value, @Nullable final Long timestamp) {
@@ -196,15 +192,135 @@ public class EventResource extends BaseResource {
     }
 
     /**
+     * Add an event to a key in the Orchestrate service.
+     *
+     * <p>Usage:</p>
+     * <pre>
+     * {@code
+     * DomainObject obj = new DomainObject(); // a POJO
+     * EventMetadata eventMeta =
+     *         client.event("someCollection", "someKey")
+     *               .type("someType")
+     *               .create(obj)
+     *               .get();
+     * }
+     * </pre>
+     *
+     * <pre>
+     * To add an event to a specific timestamp:
+     * {@code
+     * DomainObject obj = new DomainObject(); // a POJO
+     * EventMetadata eventMeta =
+     *         client.event("someCollection", "someKey")
+     *               .type("someType")
+     *               .timestamp(someTimestamp)
+     *               .create(obj)
+     *               .get();
+     * }
+     * </pre>
+     * @param value The object to store as the event.
+     * @return The prepared create request.
+     */
+    public OrchestrateRequest<EventMetadata> create(final @NonNull Object value) {
+        checkNotNull(type, "type");
+        checkArgument(start == null && end == null, "'start' and 'end' not allowed with 'create' requests.");
+
+        final byte[] content = toJsonBytes(value);
+
+        final String uri;
+        if(timestamp != null) {
+            uri = client.uri(collection, key, "events", type, ""+timestamp);
+        } else {
+            uri = client.uri(collection, key, "events", type);
+        }
+
+        final HttpRequestPacket.Builder httpHeaderBuilder = HttpRequestPacket.builder()
+                .method(Method.POST)
+                .contentType("application/json")
+                .uri(uri);
+        httpHeaderBuilder.contentLength(content.length);
+
+        final HttpContent packet = httpHeaderBuilder.build()
+                .httpContentBuilder()
+                .content(new ByteBufferWrapper(ByteBuffer.wrap(content)))
+                .build();
+
+        return new OrchestrateRequest<EventMetadata>(client, packet, new ResponseConverter<EventMetadata>() {
+            @Override
+            public EventMetadata from(final HttpContent response) throws IOException {
+                final HttpHeader header = response.getHttpHeader();
+
+                final int status = ((HttpResponsePacket) header).getStatus();
+
+                if (status == 201) {
+                    final String location = header.getHeader(Header.Location);
+                    //  /v0/{coll}/{key}/events/{type}/{timestamp}/{ordinal}
+                    final String[] parts = location.split("/");
+                    Long timestamp = new Long(parts[6]);
+                    String ordinal = parts[7];
+
+                    final String ref = header.getHeader(Header.ETag)
+                            .replace("\"", "")
+                            .replace("-gzip", "");
+                    return new EventMetadata(collection, key, type, timestamp, ordinal, ref);
+                }
+                return null;
+            }
+        });
+    }
+
+    /**
      * The type for an event, e.g. "update" or "tweet" etc.
      *
-     * @param type The type of event.
+     * @param type The type of the event.
      * @return The event resource.
      */
     public EventResource type(final String type) {
         this.type = checkNotNullOrEmpty(type, "type");
 
         return this;
+    }
+
+    /**
+     * The timestamp for an event.
+     *
+     * @param timestamp The timestamp of the event.
+     * @return The event resource.
+     */
+    public EventResource timestamp(final Long timestamp) {
+        this.timestamp = timestamp;
+
+        return this;
+    }
+
+    /**
+     * Called to make operations for an individual event instance. {@link #type}
+     * and {@link #timestamp} must be called prior to calling this method.
+     *
+     * <p>Usage:</p>
+     * <pre>
+     * {@code
+     * // fetches a single event instance
+     * Event&lt;String&gt; event =
+     *         client.event("someCollection", "someKey")
+     *               .type("someType")
+     *               .timestamp(someTimestamp)
+     *               .ordinal(someOrdinal)
+     *               .get(String.class)
+     *               .get();
+     * }
+     * </pre>
+     *
+     * @param ordinal The event instance's ordinal value.
+     * @return A SingleEventResource that can be used to perform operations for
+     *   the individual event instance.
+     */
+    public SingleEventResource ordinal(final String ordinal) {
+        checkNotNull(type, "type");
+        checkNotNull(timestamp, "timestamp");
+        checkNotNullOrEmpty(ordinal, "ordinal");
+        return new SingleEventResource(client, jacksonMapper,
+                collection, key, type, timestamp, ordinal);
     }
 
     /**

@@ -15,6 +15,8 @@
  */
 package io.orchestrate.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
@@ -25,27 +27,22 @@ import lombok.ToString;
  *            to this event.
  */
 @ToString
-@EqualsAndHashCode
-public class Event<T> {
+@EqualsAndHashCode(callSuper = true)
+public class Event<T> extends EventMetadata {
 
+    private final ObjectMapper mapper;
     /** The value for this event. */
     private final T value;
     /** The raw JSON value for this event. */
-    private final String rawValue;
-    /** The timestamp of this event. */
-    private final long timestamp;
-    /** The ordinal for the event. */
-    private final String ordinal;
+    private String rawValue;
 
-    Event(final T value, final String rawValue, final long timestamp, final String ordinal) {
-        assert (value != null);
-        assert (rawValue != null);
-        assert (timestamp >= 0);
-
+    Event(final ObjectMapper mapper, final String collection, final String key, final String type,
+          final Long timestamp, final String ordinal, final String ref, final T value, final String rawValue) {
+        super(collection, key, type, timestamp, ordinal, ref);
+        this.mapper = mapper;
         this.value = value;
+        // rawValue should not be 'final' b/c it will be lazy created when 'T' is not String
         this.rawValue = rawValue;
-        this.timestamp = timestamp;
-        this.ordinal = ordinal;
     }
 
     /**
@@ -63,25 +60,12 @@ public class Event<T> {
      * @return The raw JSON value of this event.
      */
     public final String getRawValue() {
+        if (rawValue == null && value != null) {
+            try {
+                rawValue = mapper.writeValueAsString(value);
+            } catch (JsonProcessingException ignored) {
+            }
+        }
         return rawValue;
     }
-
-    /**
-     * Returns the timestamp of this event.
-     *
-     * @return The timestamp for this event.
-     */
-    public final long getTimestamp() {
-        return timestamp;
-    }
-
-    /**
-     * Returns the ordinal of this event.
-     *
-     * @return The ordinal for this event.
-     */
-    public final String getOrdinal() {
-        return ordinal;
-    }
-
 }

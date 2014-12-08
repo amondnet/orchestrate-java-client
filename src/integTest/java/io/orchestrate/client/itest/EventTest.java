@@ -16,19 +16,21 @@
 package io.orchestrate.client.itest;
 
 import com.pholser.junit.quickcheck.ForAll;
-import io.orchestrate.client.ResponseAdapter;
+import io.orchestrate.client.*;
+import io.orchestrate.client.jsonpatch.JsonPatch;
 import org.glassfish.grizzly.utils.DataStructures;
 import org.junit.contrib.theories.Theories;
 import org.junit.contrib.theories.Theory;
 import org.junit.runner.RunWith;
 
+import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.Matchers.isEmptyString;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeThat;
 
 /**
@@ -113,4 +115,476 @@ public final class EventTest extends BaseClientTest {
         assertTrue(result);
     }
 
+    @Theory
+    public void createEvent(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMeta =
+            client.event(collection(), "key")
+                .type(type)
+                .create("{}")
+                .get();
+
+        assertNotNull(eventMeta);
+        assertNotNull(eventMeta.getTimestamp());
+    }
+
+    private static final Random RAND = new Random();
+    @Theory
+    public void getSingleEvent(@ForAll(sampleSize=10) final String badType) {
+        // not using the provided badType b/c it is allowing illegal (reserved) characters
+        // which is causing the comparison of the 'type' to fail. in later tests, we do not
+        // compare on the event type, so we do use the provided values.
+        String key = Long.toHexString(RAND.nextLong());
+        String type = Long.toHexString(RAND.nextLong());
+
+        final EventMetadata eventMeta =
+                client.event(collection(), key)
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        final EventList<String> eventList = client.event(collection(), key)
+                .type(type)
+                .get(String.class)
+                .get();
+
+        Event foundEvent = null;
+        int count =0;
+        for(Event<String> event : eventList.getEvents()) {
+            ++count;
+            foundEvent = event;
+        }
+        assertEquals(1, count);
+
+        assertNotNull(foundEvent);
+        assertEquals("{}", foundEvent.getValue());
+        assertEquals("{}", foundEvent.getRawValue());
+        assertEquals(collection(), foundEvent.getCollection());
+        assertEquals(key, foundEvent.getKey());
+        assertEquals(type, foundEvent.getType());
+        assertEquals(eventMeta.getTimestamp(), foundEvent.getTimestamp());
+        assertEquals(eventMeta.getOrdinal(), foundEvent.getOrdinal());
+        assertEquals(eventMeta.getRef(), foundEvent.getRef());
+
+        final Event<String> event = client.event(collection(), key)
+                .type(type)
+                .timestamp(eventMeta.getTimestamp())
+                .ordinal(eventMeta.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertNotNull(event);
+        assertEquals("{}", event.getValue());
+        assertEquals("{}", event.getRawValue());
+        assertEquals(collection(), event.getCollection());
+        assertEquals(key, event.getKey());
+        assertEquals(type, event.getType());
+        assertEquals(eventMeta.getTimestamp(), event.getTimestamp());
+        assertEquals(eventMeta.getOrdinal(), event.getOrdinal());
+        assertEquals(eventMeta.getRef(), event.getRef());
+    }
+
+    @Theory
+    public void purgeSingleEvent(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMeta =
+                client.event(collection(), "key")
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        final Boolean purged = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMeta.getTimestamp())
+                .ordinal(eventMeta.getOrdinal())
+                .purge()
+                .get();
+
+        assertTrue(purged);
+
+        final Event<String> event = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMeta.getTimestamp())
+                .ordinal(eventMeta.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertNull(event);
+    }
+
+    @Theory
+    public void conditionalPurgeSingleEvent(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMeta =
+                client.event(collection(), "key")
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        final Boolean purged = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMeta.getTimestamp())
+                .ordinal(eventMeta.getOrdinal())
+                .ifMatch(eventMeta.getRef())
+                .purge()
+                .get();
+
+        assertTrue(purged);
+
+        final Event<String> event = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMeta.getTimestamp())
+                .ordinal(eventMeta.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertNull(event);
+    }
+
+    @Theory
+    public void conditionalPurgeSingleEventMismatch(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMeta =
+                client.event(collection(), "key")
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        String badRef = "aa50cde812389420";
+
+        ItemVersionMismatchException mismatchEx = null;
+
+        try {
+            final Boolean purged = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMeta.getTimestamp())
+                .ordinal(eventMeta.getOrdinal())
+                .ifMatch(badRef)
+                .purge()
+                .get();
+        } catch (ItemVersionMismatchException ex) {
+            mismatchEx = ex;
+        }
+
+        assertNotNull(mismatchEx);
+
+        final Event<String> event = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMeta.getTimestamp())
+                .ordinal(eventMeta.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertNotNull(event);
+        assertEquals(eventMeta.getRef(), event.getRef());
+    }
+
+    @Theory
+    public void updateSingleEvent(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMetaV1 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        final EventMetadata eventMetaV2 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .timestamp(eventMetaV1.getTimestamp())
+                        .ordinal(eventMetaV1.getOrdinal())
+                        .update("{\"name\":\"test\"}")
+                        .get();
+
+        final Event<String> event = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMetaV1.getTimestamp())
+                .ordinal(eventMetaV1.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertEquals(eventMetaV2.getRef(), event.getRef());
+    }
+
+    @Theory
+    public void conditionalUpdateSingleEvent(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMetaV1 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        final EventMetadata eventMetaV2 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .timestamp(eventMetaV1.getTimestamp())
+                        .ordinal(eventMetaV1.getOrdinal())
+                        .ifMatch(eventMetaV1.getRef())
+                        .update("{\"name\":\"test\"}")
+                        .get();
+
+        final Event<String> event = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMetaV1.getTimestamp())
+                .ordinal(eventMetaV1.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertEquals(eventMetaV2.getRef(), event.getRef());
+    }
+
+    @Theory
+    public void conditionalUpdateSingleEventMismatch(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMetaV1 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        String badRef = "aa50cde812389420";
+
+        ItemVersionMismatchException mismatchEx = null;
+        try {
+            final EventMetadata eventMetaV2 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .timestamp(eventMetaV1.getTimestamp())
+                        .ordinal(eventMetaV1.getOrdinal())
+                        .ifMatch(badRef)
+                        .update("{\"name\":\"test\"}")
+                        .get();
+        } catch (ItemVersionMismatchException ex) {
+            mismatchEx = ex;
+        }
+
+        assertNotNull(mismatchEx);
+
+        final Event<String> event = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMetaV1.getTimestamp())
+                .ordinal(eventMetaV1.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertEquals(eventMetaV1.getRef(), event.getRef());
+    }
+
+    @Theory
+    public void patchSingleEvent(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMetaV1 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        final EventMetadata eventMetaV2 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .timestamp(eventMetaV1.getTimestamp())
+                        .ordinal(eventMetaV1.getOrdinal())
+                        .patch(JsonPatch.builder()
+                            .add("name", "test")
+                            .build()
+                        )
+                        .get();
+
+        final Event<String> event = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMetaV1.getTimestamp())
+                .ordinal(eventMetaV1.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertEquals(eventMetaV2.getRef(), event.getRef());
+        assertEquals("{\"name\":\"test\"}", event.getValue());
+        assertEquals("{\"name\":\"test\"}", event.getRawValue());
+    }
+
+    @Theory
+    public void conditionalPatchSingleEvent(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMetaV1 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        final EventMetadata eventMetaV2 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .timestamp(eventMetaV1.getTimestamp())
+                        .ordinal(eventMetaV1.getOrdinal())
+                        .ifMatch(eventMetaV1.getRef())
+                        .patch(JsonPatch.builder()
+                                .add("name", "test")
+                                .build()
+                        )
+                        .get();
+
+        final Event<String> event = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMetaV1.getTimestamp())
+                .ordinal(eventMetaV1.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertEquals(eventMetaV2.getRef(), event.getRef());
+        assertEquals("{\"name\":\"test\"}", event.getValue());
+    }
+
+    @Theory
+    public void conditionalPatchSingleEventMismatch(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMetaV1 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        String badRef = "aa50cde812389420";
+
+        ItemVersionMismatchException mismatchEx = null;
+        try {
+            final EventMetadata eventMetaV2 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .timestamp(eventMetaV1.getTimestamp())
+                        .ordinal(eventMetaV1.getOrdinal())
+                        .ifMatch(badRef)
+                        .patch(JsonPatch.builder()
+                                .add("name", "test")
+                                .build()
+                        )
+                        .get();
+        } catch (ItemVersionMismatchException ex) {
+            mismatchEx = ex;
+        }
+
+        assertNotNull(mismatchEx);
+
+
+        final Event<String> event = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMetaV1.getTimestamp())
+                .ordinal(eventMetaV1.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertEquals(eventMetaV1.getRef(), event.getRef());
+        assertEquals("{}", event.getValue());
+    }
+
+    @Theory
+    public void mergePatchSingleEvent(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMetaV1 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        final EventMetadata eventMetaV2 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .timestamp(eventMetaV1.getTimestamp())
+                        .ordinal(eventMetaV1.getOrdinal())
+                        .merge("{\"name\":\"test\"}")
+                        .get();
+
+        final Event<String> event = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMetaV1.getTimestamp())
+                .ordinal(eventMetaV1.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertEquals(eventMetaV2.getRef(), event.getRef());
+        assertEquals("{\"name\":\"test\"}", event.getValue());
+        assertEquals("{\"name\":\"test\"}", event.getRawValue());
+    }
+
+    @Theory
+    public void conditionalMergePatchSingleEvent(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMetaV1 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        final EventMetadata eventMetaV2 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .timestamp(eventMetaV1.getTimestamp())
+                        .ordinal(eventMetaV1.getOrdinal())
+                        .ifMatch(eventMetaV1.getRef())
+                        .merge("{\"name\":\"test\"}")
+                        .get();
+
+        final Event<String> event = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMetaV1.getTimestamp())
+                .ordinal(eventMetaV1.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertEquals(eventMetaV2.getRef(), event.getRef());
+        assertEquals("{\"name\":\"test\"}", event.getValue());
+        assertEquals("{\"name\":\"test\"}", event.getRawValue());
+    }
+
+    @Theory
+    public void conditionalMergePatchSingleEventMismatch(@ForAll(sampleSize=10) final String type) {
+        assumeThat(type, not(isEmptyString()));
+
+        final EventMetadata eventMetaV1 =
+                client.event(collection(), "key")
+                        .type(type)
+                        .create("{}")
+                        .get();
+
+        String badRef = "aa50cde812389420";
+
+        ItemVersionMismatchException mismatchEx = null;
+        try {
+            final EventMetadata eventMetaV2 =
+                    client.event(collection(), "key")
+                            .type(type)
+                            .timestamp(eventMetaV1.getTimestamp())
+                            .ordinal(eventMetaV1.getOrdinal())
+                            .ifMatch(badRef)
+                            .merge("{\"name\":\"test\"}")
+                            .get();
+        } catch (ItemVersionMismatchException ex) {
+            mismatchEx = ex;
+        }
+
+        assertNotNull(mismatchEx);
+
+
+        final Event<String> event = client.event(collection(), "key")
+                .type(type)
+                .timestamp(eventMetaV1.getTimestamp())
+                .ordinal(eventMetaV1.getOrdinal())
+                .get(String.class)
+                .get();
+
+        assertEquals(eventMetaV1.getRef(), event.getRef());
+        assertEquals("{}", event.getValue());
+    }
 }

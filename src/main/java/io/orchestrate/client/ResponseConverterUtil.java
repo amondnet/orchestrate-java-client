@@ -55,17 +55,76 @@ final class ResponseConverterUtil {
 
         final KvMetadata metadata = new KvMetadata(collection, key, ref);
 
+        final T value = jsonToDomainObject(mapper, valueNode, clazz);
         String rawValue = null;
-        T value = null;
-        if (valueNode != null) {
-            rawValue = mapper.writeValueAsString(valueNode);
 
-            value = (clazz == String.class)
-                    ? (T) rawValue
-                    : valueNode.traverse(mapper).readValueAs(clazz);
+        if (value != null && value instanceof String) {
+            rawValue = (String)value;
         }
 
-        // TODO Is there value in always having the raw string value available ON the KvObject?
-        return new KvObject<T>(metadata, value, rawValue);
+        return new KvObject<T>(mapper, metadata, value, rawValue);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> KvObject<T> jsonToKvObject(ObjectMapper mapper, String rawValue, Class<T> clazz,
+                                                 String collection, String key, String ref) throws IOException {
+        assert (mapper != null);
+        assert (clazz != null);
+
+        final KvMetadata metadata = new KvMetadata(collection, key, ref);
+
+        final T value = jsonToDomainObject(mapper, rawValue, clazz);
+
+        return new KvObject<T>(mapper, metadata, value, rawValue);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T jsonToDomainObject(ObjectMapper mapper,
+                       String rawValue, Class<T> clazz) throws IOException {
+        if (rawValue != null && !rawValue.isEmpty()) {
+            if (clazz.equals(String.class) ){
+                return (T)rawValue;
+            }
+            return mapper.readValue(rawValue, clazz);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T jsonToDomainObject(ObjectMapper mapper,
+                                           JsonNode json, Class<T> clazz) throws IOException {
+        if (json != null && !json.isNull()) {
+            if (clazz.equals(String.class) ){
+                return (T)mapper.writeValueAsString(json);
+            }
+            return mapper.treeToValue(json, clazz);
+        }
+        return null;
+    }
+
+    public static <T> Event<T> wrapperJsonToEvent(ObjectMapper mapper, JsonNode wrapperJson, Class<T> clazz) throws IOException {
+        assert (mapper != null);
+        assert (clazz != null);
+
+        final JsonNode path = wrapperJson.get("path");
+
+        final String collection = path.get("collection").textValue();
+        final String key = path.get("key").textValue();
+        final String eventType = path.get("type").textValue();
+        final String ref = path.get("ref").textValue();
+
+        final long timestamp = path.get("timestamp").longValue();
+        final String ordinal = path.get("ordinal").asText();
+
+        final JsonNode valueNode = wrapperJson.get("value");
+
+        final T value = jsonToDomainObject(mapper, valueNode, clazz);
+        String rawValue = null;
+        if(value != null && value instanceof String) {
+            rawValue = (String)value;
+        }
+
+        return new Event<T>(mapper, collection, key, eventType, timestamp, ordinal, ref, value, rawValue);
+
     }
 }
