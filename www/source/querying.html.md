@@ -8,7 +8,7 @@ Under the hood the client makes `HTTP` requests to the [REST API](http://docs.or
 Every Key/Value object has a unique identifier that represents the current
  version of the object, this information is known as the "ref". The ref is a
  content-based hash that identifies the specific version of a value. With it
- you can track the history of an object and retrieve old versions.
+ refs, you can track the history of an object and retrieve old versions.
 
 ### <a name="constructing-a-client"></a> Constructing a Client
 
@@ -129,7 +129,7 @@ All Key-Value operations happen in the context of a `Collection`. If the
 
 As mentioned above, all client operations are _asynchronous_.
 
-### <a name="fetch-data"></a> Fetch Data
+### <a name="fetch-data"></a> Fetch Data
 
 To fetch an object from a `collection` with a given `key`.
 
@@ -188,7 +188,7 @@ KvList<DomainObject> results =
 
 ### <a name="store-data"></a> Store Data
 
-To store an object from a `collection` to a given `key`.
+To store (add OR update) an object to a `collection` and a given `key`.
 
 ```java
 // create some data to store
@@ -203,12 +203,30 @@ final KvMetadata kvMetadata =
 System.out.println(kvMetadata.getRef());
 ```
 
-This example shows how to store a value for a key to a collection, `obj` is
- serialized to JSON by the client before writing the data.
+This example shows how to store a value for a key to a collection. `obj` is
+ serialized to JSON by the client before writing the data. If the key already
+ existed in the collection, then this operation will replace the previous
+ version of the item (the old version is still accessible via the 'ref' of that
+ version <a href=#refs).
 
 The `KvMetadata` returned by the store operation contains information about
  where the information has been stored and the version (`ref`) it's been written
  with.
+
+### <a name="fetch-data-by-ref"></a> Fetch Data by Ref
+
+To fetch an object from a `collection` with a given `key` and specific `ref`. This
+is useful for fetching old versions of an Item.
+
+```java
+KvObject<DomainObject> object =
+        client.kv("someCollection", "someKey")
+              .get(DomainObject.class, "someRef")
+              .get();
+
+DomainObject data = kvObject.getValue();
+// do something with the 'data'
+```
 
 #### <a name="conditional-store"></a> Conditional Store
 
@@ -232,7 +250,7 @@ KvMetadata kvMetadata =
 ```
 
 This type of store operation is very useful in high write concurrency
- environments, it provides a pre-condition that must be `true` for the store
+ environments. It provides a pre-condition that must be `true` for the store
  operation to succeed.
 
 #### <a name="server-generated-keys"></a> Store with Server-Generated Keys
@@ -362,6 +380,22 @@ SearchResults<DomainObject> results =
 The collection called `someCollection` will be searched with the query `*` and
  up to `50` results may be returned with a starting offset of `10` from the most
  relevant. The results will be deserialized to `DomainObject`s.
+
+In some cases, it may be helpful to only retrieve the matching keys (and refs).
+In this case, use 'withValues(Boolean.FALSE)' to indicate that the item values
+should not be included in the response.
+
+```java
+String luceneQuery = "*";
+SearchResults<DomainObject> results =
+        client.searchCollection("someCollection")
+              .limit(50)
+              .offset(10)
+              .withValues(Boolean.FALSE)
+              .get(DomainObject.class, luceneQuery)
+              .get();
+
+// same as above
 
 ### Note
 
