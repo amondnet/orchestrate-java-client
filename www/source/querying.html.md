@@ -7,7 +7,7 @@ Under the hood the client makes `HTTP` requests to the [REST API](http://docs.or
 
 Every Key/Value object has a unique identifier that represents the current
  version of the object, this information is known as the "ref". The ref is a
- content-based hash that identifies the specific version of a value. With it
+ content-based hash that identifies the specific version of a value. With
  refs, you can track the history of an object and retrieve old versions.
 
 ### <a name="constructing-a-client"></a> Constructing a Client
@@ -396,6 +396,7 @@ SearchResults<DomainObject> results =
               .get();
 
 // same as above
+```
 
 ### Note
 
