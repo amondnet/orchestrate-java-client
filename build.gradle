@@ -9,7 +9,7 @@ apply plugin: 'idea'
 apply plugin: 'eclipse'
 
 group   = 'io.orchestrate'
-version = '0.6.0-SNAPSHOT'
+version = '0.7.0-SNAPSHOT'
 
 def groovyVersion = 'groovy-2.1.8'
 def isReleaseVersion = !version.endsWith('SNAPSHOT')
@@ -198,7 +198,7 @@ idea {
         downloadJavadoc = true
         downloadSources = true
 
-        scopes.PROVIDED.plus += configurations.provided
+        scopes.PROVIDED.plus += [configurations.provided]
 
         testSourceDirs += file('src/integTest/java')
         testSourceDirs += file('src/integTest/resources')
