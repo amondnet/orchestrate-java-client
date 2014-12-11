@@ -109,13 +109,13 @@
       <p>The examples below demonstrate how to integrate the Java client into a few of
        these patterns and frameworks.</p>
       
-      <h2><a name="listenable-future"></a> Listenable Future</h2>
+      <h2><a name="listenable-future"></a> <a href="#listenable-future">Listenable Future</a></h2>
       
       <p>As well as making a blocking API call to Orchestrate to receive the result of
        a request to the service it&rsquo;s also possible to listen (or subscribe) for the
        result in a fully non-blocking way (i.e. &ldquo;callback style&rdquo;).</p>
       <pre class="highlight java"><span class="kd">final</span> <span class="n">DomainObject</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">DomainObject</span><span class="o">();</span>&#x000A;&#x000A;<span class="kd">final</span> <span class="n">Client</span> <span class="n">client</span> <span class="o">=</span> <span class="k">new</span> <span class="n">OrchestrateClient</span><span class="o">(</span><span class="s">&quot;your api key&quot;</span><span class="o">);</span>&#x000A;<span class="n">client</span><span class="o">.</span><span class="na">kv</span><span class="o">(</span><span class="s">&quot;someCollection&quot;</span><span class="o">,</span> <span class="s">&quot;someKey&quot;</span><span class="o">)</span>&#x000A;      <span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">obj</span><span class="o">)</span>&#x000A;      <span class="o">.</span><span class="na">on</span><span class="o">(</span><span class="k">new</span> <span class="n">ResponseAdapter</span><span class="o">&lt;</span><span class="n">KvMetadata</span><span class="o">&gt;()</span> <span class="o">{</span>&#x000A;          <span class="nd">@Override</span>&#x000A;          <span class="kd">public</span> <span class="kt">void</span> <span class="n">onFailure</span><span class="o">(</span><span class="kd">final</span> <span class="n">Throwable</span> <span class="n">error</span><span class="o">)</span> <span class="o">{</span>&#x000A;              <span class="c1">// handle error condition</span>&#x000A;          <span class="o">}</span>&#x000A;&#x000A;          <span class="nd">@Override</span>&#x000A;          <span class="kd">public</span> <span class="kt">void</span> <span class="n">onSuccess</span><span class="o">(</span><span class="kd">final</span> <span class="n">KvMetadata</span> <span class="n">object</span><span class="o">)</span> <span class="o">{</span>&#x000A;              <span class="c1">// do something with the result</span>&#x000A;          <span class="o">}</span>&#x000A;      <span class="o">});</span></pre>
-      <h2><a name="data-access-object"></a> Data Access Object (DAO) Pattern</h2>
+      <h2><a name="data-access-object"></a> <a href="#data-access-object">Data Access Object (DAO) Pattern</a></h2>
       
       <p>A <a href="http://en.wikipedia.org/wiki/Data_access_object">Data Access Object</a> is an
        object that provides data storage methods without exposing details of the
@@ -134,7 +134,7 @@
       <p>You can read more about the <code>GenericAsyncDao</code> in the
        <a href="/javadoc/latest/io/orchestrate/client/dao/GenericAsyncDao.html">javadocs</a>.</p>
       
-      <h2><a name="dropwizard"></a> Dropwizard (Managed)</h2>
+      <h2><a name="dropwizard"></a> <a href="#dropwizard">Dropwizard (Managed)</a></h2>
       
       <p><a href="http://dropwizard.codahale.com/">Dropwizard</a> is a Java framework for developing
        ops-friendly, high-performance, RESTful web services. If you&rsquo;ve not come across
@@ -147,7 +147,7 @@
       <pre class="highlight java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">OrchestrateClientManager</span> <span class="kd">implements</span> <span class="n">Managed</span> <span class="o">{</span>&#x000A;&#x000A;    <span class="kd">private</span> <span class="kd">final</span> <span class="n">Client</span> <span class="n">client</span><span class="o">;</span>&#x000A;&#x000A;    <span class="kd">public</span> <span class="n">OrchestrateClientManager</span><span class="o">(</span><span class="kd">final</span> <span class="n">Client</span> <span class="n">client</span><span class="o">)</span> <span class="o">{</span>&#x000A;        <span class="k">this</span><span class="o">.</span><span class="na">client</span> <span class="o">=</span> <span class="n">client</span><span class="o">;</span>&#x000A;    <span class="o">}</span>&#x000A;&#x000A;    <span class="nd">@Override</span>&#x000A;    <span class="kd">public</span> <span class="kt">void</span> <span class="n">start</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>&#x000A;        <span class="c1">// nothing to do here</span>&#x000A;    <span class="o">}</span>&#x000A;&#x000A;    <span class="nd">@Override</span>&#x000A;    <span class="kd">public</span> <span class="kt">void</span> <span class="n">stop</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>&#x000A;        <span class="n">client</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>&#x000A;    <span class="o">}</span>&#x000A;&#x000A;<span class="o">}</span></pre>
       <p>Configuring the Java client for Dropwizard is easy.</p>
       
-      <h2><a name="error-handling"></a> Error Handling</h2>
+      <h2><a name="error-handling"></a> <a href="#error-handling">Error Handling</a></h2>
       
       <p>When you call <code>get</code> an OrchestrateRequest, the client will block for the result. You
        may still register listeners that are run when the result is received from the

@@ -108,7 +108,7 @@
       
       <p>The information below demonstrates how to make advanced changes to the client.</p>
       
-      <h2><a name="tuning"></a> Tuning the Client</h2>
+      <h2><a name="tuning"></a> <a href="#tuning">Tuning the Client</a></h2>
       
       <p>As well as the <a href="querying#constructing-a-client">basic constructor</a> for the
        <code>Client</code> it&rsquo;s possible to create a client object using the builder
@@ -120,7 +120,7 @@
       <pre class="highlight java"><span class="kt">int</span> <span class="n">proc</span> <span class="o">=</span> <span class="n">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">availableProcessors</span><span class="o">();</span>&#x000A;<span class="n">Client</span> <span class="n">client</span> <span class="o">=</span> <span class="n">OrchestrateClient</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="s">&quot;your api key&quot;</span><span class="o">)</span>&#x000A;        <span class="o">.</span><span class="na">poolSize</span><span class="o">(</span><span class="n">proc</span><span class="o">)</span>&#x000A;        <span class="o">.</span><span class="na">maxPoolSize</span><span class="o">(</span><span class="n">proc</span> <span class="o">*</span> <span class="mi">20</span><span class="o">)</span>&#x000A;        <span class="o">.</span><span class="na">build</span><span class="o">();</span></pre>
       <p>You can read more about the <code>OrchestrateClient.Builder</code> in the <a href="/javadoc/latest/io/orchestrate/client/OrchestrateClient.Builder.html">javadocs</a>.</p>
       
-      <h2><a name="json-mapping"></a> Custom JSON Mapping</h2>
+      <h2><a name="json-mapping"></a> <a href="#json-mapping">Custom JSON Mapping</a></h2>
       
       <p>The Java client uses the excellent <a href="http://wiki.fasterxml.com/JacksonHome">Jackson JSON library</a>
        to handle serializing your data to JSON before it&rsquo;s written to the
@@ -132,7 +132,7 @@
       <p>You can read more about the <code>JacksonMapper.Builder</code> in the
        <a href="/javadoc/latest/io/orchestrate/client/JacksonMapper.Builder.html">javadocs</a>.</p>
       
-      <h3>Note</h3>
+      <h4><a name="json-mapping-note"></a> <a href="#json-mapping-note">Note</a></h4>
       
       <p>At the moment there&rsquo;s no way to supply your own JSON mapping library to use when
        converting data to and from your application&rsquo;s object types. For example, you
