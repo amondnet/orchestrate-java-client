@@ -15,6 +15,8 @@
  */
 package io.orchestrate.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
@@ -23,28 +25,21 @@ import lombok.ToString;
  *
  * @param <T> The deserializable type for the value of this KV object.
  */
-@ToString(callSuper=true)
-@EqualsAndHashCode(callSuper=true)
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
 public class KvObject<T> extends KvMetadata {
+    private final ObjectMapper mapper;
 
     /** The value for this KV object. */
     private final T value;
     /** The raw JSON value for this KV object. */
-    private final String rawValue;
+    private String rawValue;
 
-    KvObject(final String collection, final String key, final String ref, final T value, final String rawValue) {
-        super(collection, key, ref);
-
+    KvObject(final ObjectMapper mapper, final KvMetadata metadata, final T value, final String rawValue) {
+        super(metadata.getCollection(), metadata.getKey(), metadata.getRef());
+        this.mapper = mapper;
         this.value = value;
         this.rawValue = rawValue;
-    }
-
-    KvObject(final KvMetadata metadata, final T value, final String rawValue) {
-        this(metadata.getCollection(), metadata.getKey(), metadata.getRef(), value, rawValue);
-    }
-
-    KvObject(final KvObject<T> kvObject) {
-        this(kvObject.getCollection(), kvObject.getKey(), kvObject.getRef(), kvObject.value, kvObject.rawValue);
     }
 
     /**
@@ -62,6 +57,12 @@ public class KvObject<T> extends KvMetadata {
      * @return The raw JSON value of this KV object, may be {@code null}.
      */
     public final String getRawValue() {
+        if (rawValue == null && value != null) {
+            try {
+                rawValue = mapper.writeValueAsString(value);
+            } catch (JsonProcessingException ignored) {
+            }
+        }
         return rawValue;
     }
 

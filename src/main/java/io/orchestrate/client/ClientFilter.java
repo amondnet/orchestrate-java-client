@@ -15,6 +15,8 @@
  */
 package io.orchestrate.client;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.glassfish.grizzly.attributes.Attribute;
 import org.glassfish.grizzly.filterchain.BaseFilter;
@@ -38,6 +40,7 @@ import static org.glassfish.grizzly.attributes.AttributeBuilder.DEFAULT_ATTRIBUT
  */
 @Slf4j
 final class ClientFilter extends BaseFilter {
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /** The name of the filter attribute for a HTTP response. */
     public static final String OIO_RESPONSE_FUTURE_ATTR = "httpResp";
@@ -96,19 +99,58 @@ final class ClientFilter extends BaseFilter {
                 future.result(content);
             } else {
                 final String reqId = header.getHeader("x-orchestrate-req-id");
-                // TODO this is usually a json payload we could parse into an ClientError object
-                final String message = content.getContent().toStringContent();
-                if (status == 401) {
-                    future.failure(new InvalidApiKeyException(status, message, reqId));
-                } else {
-                    future.failure(new RequestException(status, message, reqId));
-                }
+                final String json = content.getContent().toStringContent();
+                future.failure(toException(status, reqId, json));
             }
         } catch (final Throwable t) {
             future.failure(t);
         }
 
         return ctx.getStopAction();
+    }
+
+    private Exception toException(int status, String reqId, String json) {
+        final JsonNode errorJsonNode = parseErrorJsonNode(json);
+
+        if(errorJsonNode != null && errorJsonNode.isObject() && errorJsonNode.has("code")) {
+            String errorCode = errorJsonNode.get("code").asText();
+            if(errorCode.equals("item_version_mismatch")) {
+                return new ItemVersionMismatchException(status, errorJsonNode, json, reqId);
+            }
+            if(errorCode.equals("item_already_present")) {
+                return new ItemAlreadyPresentException(status, errorJsonNode, json, reqId);
+            }
+            if(errorCode.equals("patch_conflict")) {
+                if(errorJsonNode.has("details")) {
+                    JsonNode details = errorJsonNode.get("details");
+                    if(details.has("op")) {
+                        JsonNode opNode = details.get("op");
+                        if(opNode.has("op") && opNode.get("op").textValue().equals("test")) {
+                            return new TestOpApplyException(status, errorJsonNode, json, reqId);
+                        }
+                    }
+                }
+                return new PatchConflictException(status, errorJsonNode, json, reqId);
+            }
+            if(errorCode.equals("api_bad_request")) {
+                return new ApiBadRequestException(status, errorJsonNode, json, reqId);
+            }
+        }
+
+        if (status == 401) {
+            return new InvalidApiKeyException(status, errorJsonNode, json, reqId);
+        }
+
+        return new RequestException(status, errorJsonNode, json, reqId);
+    }
+
+    private JsonNode parseErrorJsonNode(String json) {
+        try {
+            return MAPPER.readTree(json);
+        } catch (Exception ignored) {
+        }
+
+        return null;
     }
 
     @Override

@@ -34,6 +34,7 @@ abstract class BaseResource {
     /** The object mapper used to deserialize JSON responses. */
     protected final ObjectMapper mapper;
 
+    protected final JacksonMapper jacksonMapper;
     private static final Charset UTF8 = Charset.forName("UTF-8");
 
     BaseResource(final OrchestrateClient client, final JacksonMapper mapper) {
@@ -41,6 +42,7 @@ abstract class BaseResource {
         assert (mapper != null);
 
         this.client = client;
+        this.jacksonMapper = mapper;
         this.mapper = mapper.getMapper();
     }
 
@@ -64,18 +66,12 @@ abstract class BaseResource {
 
     protected <T> KvObject<T> toKvObject(HttpContent response, String collection, String key,
                                          Class<T> clazz) throws IOException {
-        final JsonNode valueNode = toJsonNode(response);
+        final String rawValue = response.getContent().toStringContent();
         final String ref = response.getHttpHeader().getHeader(Header.ETag)
                 .replace("\"", "")
                 .replaceFirst("-gzip$", "");
 
-        return ResponseConverterUtil.jsonToKvObject(mapper, valueNode, clazz, collection, key, ref);
+        return ResponseConverterUtil.jsonToKvObject(mapper, rawValue, clazz, collection, key, ref);
     }
 
-    @SuppressWarnings("unchecked")
-    protected <T> T toDomainObject(String rawValue, Class<T> clazz) throws IOException {
-        return (clazz == String.class)
-                ? (T) rawValue
-                : mapper.readValue(rawValue, clazz);
-    }
 }

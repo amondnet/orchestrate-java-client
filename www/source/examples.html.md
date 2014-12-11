@@ -5,7 +5,7 @@ There are a very large number of libraries and frameworks in the Java ecosystem,
 The examples below demonstrate how to integrate the Java client into a few of
  these patterns and frameworks.
 
-## <a name="listenable-future"></a> Listenable Future
+## <a name="listenable-future"></a> [Listenable Future](#listenable-future)
 
 As well as making a blocking API call to Orchestrate to receive the result of
  a request to the service it's also possible to listen (or subscribe) for the
@@ -30,7 +30,7 @@ client.kv("someCollection", "someKey")
       });
 ```
 
-## <a name="data-access-object"></a> Data Access Object (DAO) Pattern
+## <a name="data-access-object"></a> [Data Access Object (DAO) Pattern](#data-access-object)
 
 A [Data Access Object](http://en.wikipedia.org/wiki/Data_access_object) is an
  object that provides data storage methods without exposing details of the
@@ -85,7 +85,7 @@ KvMetadata kvMetadata = dao.save(new MyObject());
 You can read more about the `GenericAsyncDao` in the
  [javadocs](/javadoc/latest/io/orchestrate/client/dao/GenericAsyncDao.html).
 
-## <a name="dropwizard"></a> Dropwizard (Managed)
+## <a name="dropwizard"></a> [Dropwizard (Managed)](#dropwizard)
 
 [Dropwizard](http://dropwizard.codahale.com/) is a Java framework for developing
  ops-friendly, high-performance, RESTful web services. If you've not come across
@@ -120,7 +120,7 @@ public class OrchestrateClientManager implements Managed {
 
 Configuring the Java client for Dropwizard is easy.
 
-## <a name="error-handling"></a> Error Handling
+## <a name="error-handling"></a> [Error Handling](#error-handling)
 
 When you call `get` an OrchestrateRequest, the client will block for the result. You
  may still register listeners that are run when the result is received from the

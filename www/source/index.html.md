@@ -5,7 +5,7 @@ The client uses the [Grizzly framework](https://grizzly.java.net/) for
  for marshalling data to and from the [Orchestrate.io](http://orchestrate.io/)
  service.
 
-## <a name="about"></a> About Orchestrate
+## <a name="about"></a> [About Orchestrate](#about)
 
 The [Orchestrate.io](http://orchestrate.io/) service is a platform for storing
  and querying data.
@@ -21,14 +21,14 @@ Using Orchestrate.io you can focus on building applications and adding new
  ways to query the data and keeping the service highly available to support your
  applications as they grow.
 
-### Creating an account
+### <a name="create-account"></a> [Creating an account](#create-account)
 
 You can create an account by signing up at our
  [Dashboard](https://dashboard.orchestrate.io/).
 
 [https://dashboard.orchestrate.io](https://dashboard.orchestrate.io)
 
-## <a name="getting-started"></a> Getting Started
+## <a name="getting-started"></a> [Getting Started](#getting-started)
 
 Once you've created an account with the Orchestrate.io Dashboard you're ready to
  build an application with the Java client.
@@ -56,12 +56,12 @@ To start reading and writing data to your application, have a look at
 For more information check out the [Getting Started](https://dashboard.orchestrate.io/getting_started)
  section in the Dashboard.
 
-## <a name="managed-dependency"></a> Managed Dependency
+## <a name="managed-dependency"></a> [Managed Dependency](#managed-dependency)
 
 The Orchestrate Java Client is available on
  [Maven Central](http://search.maven.org/#search|gav|1|g%3A%22io.orchestrate%22%20AND%20a%3A%22orchestrate-client%22).
 
-### Gradle
+### <a name="gradle-deps"></a> [Gradle](#gradle-deps)
 
 ```groovy
 dependencies {
@@ -71,7 +71,7 @@ dependencies {
 }
 ```
 
-### Maven
+### <a name="maven-deps"></a> [Maven](#maven-deps)
 
 ```xml
 <dependency>
@@ -81,13 +81,13 @@ dependencies {
 </dependency>
 ```
 
-## <a name="download"></a> Download
+## <a name="download"></a> [Download](#download)
 
 If you're not using Maven (or a dependency resolver that's compatible with Maven
  repositories), you can download the JARs you need for your project from Maven
  Central.
 
-### Source Code
+### <a name="java-client-source"></a> [Source Code](#java-client-source)</a>
 
 The codebase for this library is open source on
  [GitHub](https://github.com/orchestrate-io/orchestrate-java-client):
@@ -97,7 +97,7 @@ The codebase for this library is open source on
 Code licensed under the [Apache License v2.0](http://www.apache.org/licenses/LICENSE-2.0).
  Documentation licensed under [CC BY 3.0](http://creativecommons.org/licenses/by/3.0/).
 
-### Contribute
+### <a name="java-client-contribute"></a> [Contribute](#java-client-contribute)
 
 All contributions to the documentation and the codebase are very welcome. Feel
  free to open issues on the tracker wherever the documentation or code needs
@@ -105,12 +105,12 @@ All contributions to the documentation and the codebase are very welcome. Feel
 
 Also, pull requests are always welcome\! `:)`
 
-### Note
+#### <a name="java-client-note"></a> [Note](#java-client-note)
 
 The client API is still in _flux_, we're looking for [feedback](/feedback.html)
  from developers and learning what you need to build incredible applications.
 
-## <a name="javadoc"></a> Javadoc
+## <a name="javadoc"></a> [Javadoc](#javadoc)
 
 The javadoc for the latest version of the client is available at:
 

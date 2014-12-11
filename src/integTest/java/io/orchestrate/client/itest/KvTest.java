@@ -15,8 +15,11 @@
  */
 package io.orchestrate.client.itest;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pholser.junit.quickcheck.ForAll;
 import io.orchestrate.client.*;
+import io.orchestrate.client.jsonpatch.JsonPatch;
+import io.orchestrate.client.jsonpatch.JsonPatchOp;
 import org.glassfish.grizzly.utils.DataStructures;
 import org.junit.Rule;
 import org.junit.Test;
@@ -26,6 +29,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
+import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -43,6 +47,7 @@ public final class KvTest extends BaseClientTest {
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
+    private static final Random RAND = new Random();
 
     @Theory
     public void deleteKey(@ForAll(sampleSize=10) final String key) {
@@ -632,4 +637,578 @@ public final class KvTest extends BaseClientTest {
         assertEquals(collection, kvMetadata.getCollection());
     }
 
+    @Theory
+    public void patchKey(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        final KvMetadata kvMetadata =
+            client.kv(collection(), key)
+                .put("{}")
+                .get();
+
+        String name = Long.toHexString(RAND.nextLong());
+
+        final KvMetadata patched = client.kv(collection(), key)
+            .patch(
+                JsonPatch.builder()
+                    .add("name", name)
+                    .build()
+            )
+            .get();
+
+        assertNotEquals(kvMetadata, patched);
+
+        final KvObject<ObjectNode> kvObject =
+            client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
+                .get(ObjectNode.class)
+                .get();
+
+        assertNotNull(kvMetadata);
+        assertNotNull(kvObject);
+        assertEquals(kvMetadata.getCollection(), kvObject.getCollection());
+        assertEquals(kvMetadata.getKey(), kvObject.getKey());
+        assertEquals(patched.getRef(), kvObject.getRef());
+        assertEquals(name, kvObject.getValue().get("name").asText());
+    }
+
+    @Theory
+    public void patchKeyAsync(@ForAll(sampleSize=10) final String key)
+            throws InterruptedException {
+        assumeThat(key, not(isEmptyString()));
+
+        final KvMetadata kvMetadata =
+            client.kv(collection(), key)
+                .put("{}")
+                .get();
+
+        String name = Long.toHexString(RAND.nextLong());
+
+        final BlockingQueue<KvMetadata> queue = DataStructures.getLTQInstance(KvMetadata.class);
+        client.kv(collection(), key)
+            .patch(
+                JsonPatch.builder()
+                    .add("name", name)
+                    .build()
+            )
+            .on(new ResponseAdapter<KvMetadata>() {
+                @Override
+                public void onFailure(final Throwable error) {
+                    fail(error.getMessage());
+                }
+
+                @Override
+                public void onSuccess(final KvMetadata object) {
+                    queue.add(object);
+                }
+            });
+
+        final KvMetadata patched = queue.poll(5000, TimeUnit.MILLISECONDS);
+
+        assertNotEquals(kvMetadata, patched);
+
+        final KvObject<ObjectNode> kvObject =
+                client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
+                        .get(ObjectNode.class)
+                        .get();
+
+        assertNotNull(kvMetadata);
+        assertNotNull(kvObject);
+        assertEquals(kvMetadata.getCollection(), kvObject.getCollection());
+        assertEquals(kvMetadata.getKey(), kvObject.getKey());
+        assertEquals(patched.getRef(), kvObject.getRef());
+        assertEquals(name, kvObject.getValue().get("name").asText());
+    }
+
+    @Theory
+    public void conditionalPatchKey(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        final KvMetadata kvMetadata =
+            client.kv(collection(), key)
+                .put("{}")
+                .get();
+
+        String name = Long.toHexString(RAND.nextLong());
+
+        final KvMetadata patched = client.kv(collection(), key)
+            .ifMatch(kvMetadata.getRef())
+            .patch(
+                JsonPatch.builder()
+                    .add("name", name)
+                    .build()
+            )
+            .get();
+
+        assertNotEquals(kvMetadata, patched);
+
+        final KvObject<ObjectNode> kvObject =
+            client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
+                .get(ObjectNode.class)
+                .get();
+
+        assertNotNull(kvMetadata);
+        assertNotNull(kvObject);
+        assertEquals(kvMetadata.getCollection(), kvObject.getCollection());
+        assertEquals(kvMetadata.getKey(), kvObject.getKey());
+        assertEquals(patched.getRef(), kvObject.getRef());
+        assertEquals(name, kvObject.getValue().get("name").asText());
+    }
+
+    @Theory
+    public void conditionalPatchKeyAsync(@ForAll(sampleSize=10) final String key)
+            throws InterruptedException {
+        assumeThat(key, not(isEmptyString()));
+
+        final KvMetadata kvMetadata =
+            client.kv(collection(), key)
+                .put("{}")
+                .get();
+
+        String name = Long.toHexString(RAND.nextLong());
+
+        final BlockingQueue<KvMetadata> queue = DataStructures.getLTQInstance(KvMetadata.class);
+        client.kv(collection(), key)
+            .ifMatch(kvMetadata.getRef())
+            .patch(
+                    JsonPatch.builder()
+                            .add("name", name)
+                            .build()
+            )
+            .on(new ResponseAdapter<KvMetadata>() {
+                @Override
+                public void onFailure(final Throwable error) {
+                    fail(error.getMessage());
+                }
+
+                @Override
+                public void onSuccess(final KvMetadata object) {
+                    queue.add(object);
+                }
+            });
+
+        final KvMetadata patched = queue.poll(5000, TimeUnit.MILLISECONDS);
+
+        assertNotEquals(kvMetadata, patched);
+
+        final KvObject<ObjectNode> kvObject =
+            client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
+                .get(ObjectNode.class)
+                .get();
+
+        assertNotNull(kvMetadata);
+        assertNotNull(kvObject);
+        assertEquals(kvMetadata.getCollection(), kvObject.getCollection());
+        assertEquals(kvMetadata.getKey(), kvObject.getKey());
+        assertEquals(patched.getRef(), kvObject.getRef());
+        assertEquals(name, kvObject.getValue().get("name").asText());
+    }
+
+    @Theory
+    public void conditionalPatchKeyRefFailed(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        client.kv(collection(), key)
+                .put("{}")
+                .get();
+
+        String name = Long.toHexString(RAND.nextLong());
+
+        ItemVersionMismatchException thrown = null;
+        try {
+            final KvMetadata patched = client.kv(collection(), key)
+                .ifMatch("0000000000000000")
+                .patch(
+                        JsonPatch.builder()
+                                .add("name", name)
+                                .build()
+                )
+                .get();
+            fail("Should have failed with a concurrency conflict.");
+        } catch (ItemVersionMismatchException ex) {
+            thrown = ex;
+        }
+
+        assertNotNull(thrown);
+    }
+
+    @Theory
+    public void patchTestOpFailure(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        client.kv(collection(), key)
+                .put("{\"name\":\"Test1\"}")
+                .get();
+
+        String name = Long.toHexString(RAND.nextLong());
+
+        TestOpApplyException thrown = null;
+        try {
+            final KvMetadata patched = client.kv(collection(), key)
+                .patch(
+                        JsonPatch.builder()
+                                .test("name", "Test2") // should fail b/c we initialized name to Test1
+                                .add("name", name)
+                                .build()
+                )
+                .get();
+            fail("Should have failed with a concurrency conflict.");
+        } catch (TestOpApplyException ex) {
+            thrown = ex;
+        }
+
+        assertNotNull(thrown);
+        assertEquals(0, (int)thrown.getOpIndex());
+        assertEquals("test", thrown.getOp().getOp());
+        assertNotNull(thrown.getDetails().get("expected"));
+
+        final KvObject<ObjectNode> kvObject =
+            client.kv(collection(), key)
+                .get(ObjectNode.class)
+                .get();
+
+        // should not have changed name b/c test op failed.
+        assertEquals("Test1", kvObject.getValue().get("name").textValue());
+    }
+
+    @Theory
+    public void patchOpFailureMissingPath(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        KvMetadata orig = client.kv(collection(), key)
+                .put("{}")
+                .get();
+
+        String name = Long.toHexString(RAND.nextLong());
+
+        PatchConflictException thrown = null;
+        try {
+            final KvMetadata patched = client.kv(collection(), key)
+                .patch(
+                    JsonPatch.builder()
+                        .add("lastName", name)
+                        .move("name", "firstName") // should fail b/c there is no 'name' field
+                        .build()
+                )
+                .get();
+            fail("Should have failed with a concurrency conflict.");
+        } catch (PatchConflictException ex) {
+            thrown = ex;
+        }
+
+        assertNotNull(thrown);
+        assertEquals(1, (int)thrown.getOpIndex());
+        assertEquals("move", thrown.getOp().getOp());
+
+        final KvObject<ObjectNode> kvObject = client.kv(collection(), key)
+            .get(ObjectNode.class)
+            .get();
+
+        // should not have changed b/c test op failed.
+        assertEquals(orig.getRef(), kvObject.getRef());
+    }
+
+    @Theory
+    public void patchOpFailureInvalidOp(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        client.kv(collection(), key)
+                .put("{\"name\":\"test\"}")
+                .get();
+
+        String name = Long.toHexString(RAND.nextLong());
+
+        ApiBadRequestException thrown = null;
+        try {
+            final KvMetadata patched = client.kv(collection(), key)
+                .patch(
+                    JsonPatch.builder()
+                        .op(new JsonPatchOp("bad", "name", name))
+                        .build()
+                )
+                .get();
+            fail("Should have failed with a bad request.");
+        } catch (ApiBadRequestException ex) {
+            thrown = ex;
+        }
+
+        assertNotNull(thrown);
+    }
+
+    @Theory
+    public void patchWithIncOp(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        int value = RAND.nextInt(100000);
+
+        client.kv(collection(), key)
+                .put("{\"count\":" + value + "}")
+                .get();
+
+        final KvMetadata patched = client.kv(collection(), key)
+            .patch(
+                    JsonPatch.builder()
+                            .inc("count")
+                            .build()
+            )
+            .get();
+
+        final KvObject<ObjectNode> kvObject = client.kv(collection(), key)
+            .get(ObjectNode.class)
+            .get();
+
+        assertEquals(value+1, kvObject.getValue().get("count").intValue());
+    }
+
+    @Theory
+    public void patchWithRemoveOp(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        int value = RAND.nextInt(100000);
+
+        client.kv(collection(), key)
+                .put("{\"count\":"+value+"}")
+                .get();
+
+        final KvMetadata patched = client.kv(collection(), key)
+            .patch(
+                    JsonPatch.builder()
+                            .remove("count")
+                            .build()
+            )
+            .get();
+
+        final KvObject<ObjectNode> kvObject = client.kv(collection(), key)
+                .get(ObjectNode.class)
+                .get();
+
+        assertFalse(kvObject.getValue().has("count"));
+    }
+
+    @Theory
+    public void patchWithReplaceOp(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        int value1 = RAND.nextInt(100000);
+
+        client.kv(collection(), key)
+                .put("{\"count\":"+value1+"}")
+                .get();
+
+        int value2 = RAND.nextInt(100000);
+
+        final KvMetadata patched = client.kv(collection(), key)
+                .patch(
+                    JsonPatch.builder()
+                        .replace("count", value2)
+                        .build()
+                )
+                .get();
+
+        final KvObject<ObjectNode> kvObject = client.kv(collection(), key)
+                .get(ObjectNode.class)
+                .get();
+
+        assertEquals(value2, kvObject.getValue().get("count").intValue());
+    }
+
+    @Theory
+    public void patchWithReplaceWithNullValue(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        int value1 = RAND.nextInt(100000);
+
+        client.kv(collection(), key)
+                .put("{\"count\":"+value1+"}")
+                .get();
+
+        final KvMetadata patched = client.kv(collection(), key)
+                .patch(
+                    JsonPatch.builder()
+                        .replace("count", null)
+                        .build()
+                )
+                .get();
+
+        final KvObject<ObjectNode> kvObject = client.kv(collection(), key)
+                .get(ObjectNode.class)
+                .get();
+
+        assertTrue(kvObject.getValue().has("count"));
+        assertTrue(kvObject.getValue().get("count").isNull());
+    }
+
+    @Theory
+    public void mergePatchKey(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        String name1 = Long.toHexString(RAND.nextLong());
+
+        final KvMetadata kvMetadata =
+            client.kv(collection(), key)
+                .put("{\"name1\":\""+name1+"\"}")
+                .get();
+
+
+        String name2 = Long.toHexString(RAND.nextLong());
+
+        final KvMetadata patched = client.kv(collection(), key)
+            .merge("{\"name2\":\""+name2+"\"}")
+            .get();
+
+        assertNotEquals(kvMetadata, patched);
+
+        final KvObject<ObjectNode> kvObject =
+            client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
+                .get(ObjectNode.class)
+                .get();
+
+        assertEquals(patched.getRef(), kvObject.getRef());
+        assertEquals(name1, kvObject.getValue().get("name1").asText());
+        assertEquals(name2, kvObject.getValue().get("name2").asText());
+    }
+
+    @Theory
+    public void mergePatchKeyAsync(@ForAll(sampleSize=10) final String key)
+            throws InterruptedException {
+        assumeThat(key, not(isEmptyString()));
+
+        String name1 = Long.toHexString(RAND.nextLong());
+
+        final KvMetadata kvMetadata =
+                client.kv(collection(), key)
+                        .put("{\"name1\":\""+name1+"\"}")
+                        .get();
+
+        String name2 = Long.toHexString(RAND.nextLong());
+
+        final BlockingQueue<KvMetadata> queue = DataStructures.getLTQInstance(KvMetadata.class);
+
+        client.kv(collection(), key)
+            .merge("{\"name2\":\""+name2+"\"}")
+            .on(new ResponseAdapter<KvMetadata>() {
+                @Override
+                public void onFailure(final Throwable error) {
+                    fail(error.getMessage());
+                }
+
+                @Override
+                public void onSuccess(final KvMetadata object) {
+                    queue.add(object);
+                }
+            });
+
+        final KvMetadata patched = queue.poll(5000, TimeUnit.MILLISECONDS);
+
+        assertNotEquals(kvMetadata, patched);
+
+        final KvObject<ObjectNode> kvObject =
+                client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
+                        .get(ObjectNode.class)
+                        .get();
+
+        assertEquals(patched.getRef(), kvObject.getRef());
+        assertEquals(name1, kvObject.getValue().get("name1").asText());
+        assertEquals(name2, kvObject.getValue().get("name2").asText());
+    }
+
+    @Theory
+    public void conditionalMergePatchKey(@ForAll(sampleSize=10) final String key) throws InterruptedException {
+        assumeThat(key, not(isEmptyString()));
+
+        String name1 = Long.toHexString(RAND.nextLong());
+
+        final KvMetadata kvMetadata =
+                client.kv(collection(), key)
+                        .put("{\"name1\":\""+name1+"\"}")
+                        .get();
+
+        String name2 = Long.toHexString(RAND.nextLong());
+
+        final KvMetadata patched = client.kv(collection(), key)
+            .ifMatch(kvMetadata.getRef())
+            .merge("{\"name2\":\""+name2+"\"}")
+            .get();
+
+        assertNotEquals(kvMetadata, patched);
+
+        final KvObject<ObjectNode> kvObject =
+                client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
+                        .get(ObjectNode.class)
+                        .get();
+
+        assertEquals(patched.getRef(), kvObject.getRef());
+        assertEquals(name1, kvObject.getValue().get("name1").asText());
+        assertEquals(name2, kvObject.getValue().get("name2").asText());
+    }
+
+    @Theory
+    public void conditionalMergePatchKeyAsync(@ForAll(sampleSize=10) final String key) throws InterruptedException {
+        assumeThat(key, not(isEmptyString()));
+
+        String name1 = Long.toHexString(RAND.nextLong());
+
+        final KvMetadata kvMetadata =
+                client.kv(collection(), key)
+                        .put("{\"name1\":\""+name1+"\"}")
+                        .get();
+
+        String name2 = Long.toHexString(RAND.nextLong());
+
+        final BlockingQueue<KvMetadata> queue = DataStructures.getLTQInstance(KvMetadata.class);
+
+        client.kv(collection(), key)
+                .ifMatch(kvMetadata.getRef())
+                .merge("{\"name2\":\""+name2+"\"}")
+                .on(new ResponseAdapter<KvMetadata>() {
+                    @Override
+                    public void onFailure(final Throwable error) {
+                        fail(error.getMessage());
+                    }
+
+                    @Override
+                    public void onSuccess(final KvMetadata object) {
+                        queue.add(object);
+                    }
+                });
+
+        final KvMetadata patched = queue.poll(5000, TimeUnit.MILLISECONDS);
+
+        assertNotEquals(kvMetadata, patched);
+
+        final KvObject<ObjectNode> kvObject =
+                client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
+                        .get(ObjectNode.class)
+                        .get();
+
+        assertEquals(patched.getRef(), kvObject.getRef());
+        assertEquals(name1, kvObject.getValue().get("name1").asText());
+        assertEquals(name2, kvObject.getValue().get("name2").asText());
+    }
+
+    @Theory
+    public void conditionalMergePatchKeyRefFailed(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        String name1 = Long.toHexString(RAND.nextLong());
+
+        final KvMetadata kvMetadata =
+                client.kv(collection(), key)
+                        .put("{\"name1\":\""+name1+"\"}")
+                        .get();
+
+        String name2 = Long.toHexString(RAND.nextLong());
+
+        ItemVersionMismatchException thrown = null;
+        try {
+            final KvMetadata patched = client.kv(collection(), key)
+                    .ifMatch("0000000000000000")
+                    .merge("{\"name2\":\""+name2+"\"}")
+                    .get();
+            fail("Should have failed with a concurrency conflict.");
+        } catch (ItemVersionMismatchException ex) {
+            thrown = ex;
+        }
+
+        assertNotNull(thrown);
+    }
 }

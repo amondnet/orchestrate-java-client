@@ -4,7 +4,7 @@ While we try to ensure the Java client has useful default configuration settings
 
 The information below demonstrates how to make advanced changes to the client.
 
-## <a name="tuning"></a> Tuning the Client
+## <a name="tuning"></a> [Tuning the Client](#tuning)
 
 As well as the [basic constructor](querying#constructing-a-client) for the
  `Client` it's possible to create a client object using the builder
@@ -24,7 +24,7 @@ Client client = OrchestrateClient.builder("your api key")
 
 You can read more about the `OrchestrateClient.Builder` in the [javadocs](/javadoc/latest/io/orchestrate/client/OrchestrateClient.Builder.html).
 
-## <a name="json-mapping"></a> Custom JSON Mapping
+## <a name="json-mapping"></a> [Custom JSON Mapping](#json-mapping)
 
 The Java client uses the excellent [Jackson JSON library](http://wiki.fasterxml.com/JacksonHome)
  to handle serializing your data to JSON before it's written to the
@@ -56,7 +56,7 @@ Client client = OrchestrateClient.builder("your api key")
 You can read more about the `JacksonMapper.Builder` in the
  [javadocs](/javadoc/latest/io/orchestrate/client/JacksonMapper.Builder.html).
 
-### Note
+#### <a name="json-mapping-note"></a> [Note](#json-mapping-note)
 
 At the moment there's no way to supply your own JSON mapping library to use when
  converting data to and from your application's object types. For example, you
