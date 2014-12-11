@@ -17,6 +17,7 @@ package io.orchestrate.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+@SuppressWarnings("serial")
 public class ItemAlreadyPresentException extends RequestException {
     ItemAlreadyPresentException(int statusCode, JsonNode json, String rawResponse, String requestId) {
         super(statusCode, json, rawResponse, requestId);

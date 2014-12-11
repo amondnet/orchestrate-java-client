@@ -17,6 +17,7 @@ package io.orchestrate.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+@SuppressWarnings("serial")
 public class ItemVersionMismatchException extends RequestException {
     ItemVersionMismatchException(int statusCode, JsonNode json, String rawResponse, String requestId) {
         super(statusCode, json, rawResponse, requestId);

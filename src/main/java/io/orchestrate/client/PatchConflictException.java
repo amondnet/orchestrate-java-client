@@ -18,6 +18,7 @@ package io.orchestrate.client;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.orchestrate.client.jsonpatch.JsonPatchOp;
 
+@SuppressWarnings("serial")
 public class PatchConflictException extends RequestException {
     private Integer opIndex;
     private JsonPatchOp op;
