@@ -82,12 +82,12 @@ public final class Preconditions {
     }
 
     /**
-     +     * Checks that the {@code value} is not negative.
-     +     *
-     +     * @param value The object to perform the check on.
-     +     * @param paramName The name of the parameter that can't be negative.
-     +     * @return The value that was checked.
-     +     */
+     * Checks that the {@code value} is not negative.
+     *
+     * @param value The object to perform the check on.
+     * @param paramName The name of the parameter that can't be negative.
+     * @return The value that was checked.
+     */
     public static long checkNotNegative(final long value, final String paramName) {
         if (value < 0) {
             final String msg = String.format("'%s' cannot be negative.", paramName);

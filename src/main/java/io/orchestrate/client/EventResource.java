@@ -131,7 +131,9 @@ public class EventResource extends BaseResource {
     /**
      * {@link #put(Object, Long)}.
      * @deprecated Use {@link #create(Object)} for adding new events, and SingleEventResource's 'update'
-     *  (via {@link #ordinal(Long)}) for updating existing event instances.
+     *  (via {@link #ordinal(String)}) for updating existing event instances.
+     * @param value The value for the event.
+     * @return The prepared put request.
      */
     public OrchestrateRequest<Boolean> put(final @NonNull Object value) {
         // Does NOT refer to current 'timestamp' because that is not how legacy worked (pre-deprecation).
@@ -157,7 +159,7 @@ public class EventResource extends BaseResource {
      * @param timestamp The timestamp to store the event at.
      * @return The prepared put request.
      * @deprecated Use {@link #create(Object)} for adding new events, and SingleEventResource's 'update'
-     *  (via {@link #ordinal(Long)}) for updating existing event instances.
+     *  (via {@link #ordinal(String)}) for updating existing event instances.
      */
     public OrchestrateRequest<Boolean> put(
             final @NonNull Object value, @Nullable final Long timestamp) {

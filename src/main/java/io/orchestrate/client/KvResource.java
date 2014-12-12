@@ -60,6 +60,7 @@ public class KvResource extends BaseResource {
 
     /**
      * {@link #delete(boolean)}.
+     * @return The prepared delete request.
      */
     public OrchestrateRequest<Boolean> delete() {
         return delete(Boolean.FALSE);
@@ -111,6 +112,9 @@ public class KvResource extends BaseResource {
 
     /**
      * {@link #get(Class)}.
+     * @param clazz Type information for marshalling objects at runtime.
+     * @param <T> The type to deserialize the result to.
+     * @return This KV resource.
      */
     public <T> OrchestrateRequest<KvObject<T>> get(final Class<T> clazz) {
         return get(clazz, null);

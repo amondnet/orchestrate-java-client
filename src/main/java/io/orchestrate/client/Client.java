@@ -79,6 +79,8 @@ public interface Client {
     public void ping() throws IOException;
 
     /**
+     * @param collection The name of the collection.
+     * @throws java.io.IOException If the ping request failed.
      * @see #ping()
      */
     @Deprecated
