@@ -34,13 +34,16 @@ public class SearchResults<T> implements Iterable<Result<T>> {
     private final List<Result<T>> results;
     /** The total number of search results. */
     private final int totalCount;
+    /** The aggregate results associated with this search. */
+    private final List<AggregateResult> aggregates;
 
-    SearchResults(final List<Result<T>> results, final int totalCount) {
+    SearchResults(final List<Result<T>> results, final int totalCount, final List<AggregateResult> aggregates) {
         assert (results != null);
         assert (totalCount >= 0);
 
         this.results = results;
         this.totalCount = totalCount;
+        this.aggregates = aggregates;
     }
 
     /**
@@ -50,6 +53,15 @@ public class SearchResults<T> implements Iterable<Result<T>> {
      */
     public final Iterable<Result<T>> getResults() {
         return results;
+    }
+
+    /**
+     * Returns the aggregate results associated with these search results.
+     *
+     * @return The aggregate results.
+     */
+    public final Iterable<AggregateResult> getAggregates() {
+        return aggregates;
     }
 
     /**

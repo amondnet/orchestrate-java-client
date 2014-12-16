@@ -16,6 +16,7 @@
 package io.orchestrate.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.glassfish.grizzly.http.HttpContent;
 import org.glassfish.grizzly.http.HttpRequestPacket;
 import org.glassfish.grizzly.http.HttpResponsePacket;
@@ -23,6 +24,7 @@ import org.glassfish.grizzly.http.Method;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -43,6 +45,8 @@ public class CollectionSearchResource extends BaseResource {
     private boolean withValues;
     /** The fully-qualified names of fields to sort upon. */
     private String sortFields;
+    /** The aggregate functions to include in this query. */
+    private String aggregateFields;
 
     CollectionSearchResource(
             final OrchestrateClient client,
@@ -57,6 +61,7 @@ public class CollectionSearchResource extends BaseResource {
         this.offset = 0;
         this.withValues = true;
         this.sortFields = null;
+        this.aggregateFields = null;
     }
 
     /**
@@ -93,6 +98,9 @@ public class CollectionSearchResource extends BaseResource {
         if (sortFields != null) {
             query = query.concat("&sort=").concat(sortFields);
         }
+        if (aggregateFields != null) {
+            query = query.concat("&aggregate=").concat(aggregateFields);
+        }
 
         final HttpContent packet = HttpRequestPacket.builder()
                 .method(Method.GET)
@@ -114,6 +122,11 @@ public class CollectionSearchResource extends BaseResource {
                 final int count = jsonNode.get("count").asInt();
                 final List<Result<T>> results = new ArrayList<Result<T>>(count);
 
+                List<AggregateResult> aggregates = Collections.<AggregateResult>emptyList();
+                if (jsonNode.has("aggregates")) {
+                    aggregates = AggregateResult.from((ArrayNode) jsonNode.get("aggregates"));
+                }
+
                 final Iterator<JsonNode> iter = jsonNode.get("results").elements();
                 while (iter.hasNext()) {
                     final JsonNode result = iter.next();
@@ -131,7 +144,7 @@ public class CollectionSearchResource extends BaseResource {
                     results.add(new Result<T>(kvObject, score, distance));
                 }
 
-                return new SearchResults<T>(results, totalCount);
+                return new SearchResults<T>(results, totalCount, aggregates);
             }
         });
     }
@@ -182,6 +195,50 @@ public class CollectionSearchResource extends BaseResource {
         this.sortFields = checkNotNull(sortFields, "sortFields");
         return this;
     }
+
+    /**
+    * Apply a collection of aggregate functions to the items matched by this
+    * query. Multiple different aggregate functions can be included, by separating
+    * them with commas.
+    *
+    * <p>
+    * {@code
+    * client.searchCollection("someCollection")
+    *     .aggregate("value.cart.items.price:stats,value.inventory.in_stock:range:0~10:10~100:100~*")
+    *     .get(String.class, "*")
+    *     .get()
+    * }
+    * </p>
+    *
+    * The complete list of aggregate functions is passed into this method as a string.
+    * To make sure you use correct syntax, we recommend using the Aggregate class,
+    * with its builder functionality.
+    *
+    * <p>
+    * {@code
+    * client.searchCollection("someCollection")
+    *     .aggregate(Aggregate.builder()
+    *         .stats("value.cart.items.price")
+    *         .range(
+    *             "value.inventory.in_stock",
+    *             Range.between(0, 10),
+    *             Range.between(10, 100),
+    *             Range.above(100)
+    *         )
+    *         .build()
+    *     )
+    *     .get(String.class, "*")
+    *     .get()
+    * }
+    * </p>
+    *
+    * @param aggregateFields The comma separated aggregate-function definitions.
+    * @return This request.
+    */
+   public CollectionSearchResource aggregate(final String aggregateFields) {
+       this.aggregateFields = checkNotNull(aggregateFields, "aggregateFields");
+       return this;
+   }
 
     /**
      * If {@code withValues} is {@code true} then the KV objects in the search

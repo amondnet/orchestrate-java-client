@@ -611,6 +611,102 @@ SearchResults<DomainObject> results =
 Ignore the backslashes in the first two examples, this is necessary to escape
  the quotes in the Java string literal.
 
+## <a name="aggregates"></a> [Aggregate Functions](#aggregates)
+
+In the Orchestrate.io search API, any query can be optionally accompanied by a
+collection of aggregate functions, each providing a summary of the data items
+matched by the query. There are four different kinds of aggregate functions:
+Statistical, Range, Distance, and TimeSeries.
+
+Here are a few examples to show how to use aggregate functions in common
+scenarios:
+
+```java
+// Stats Aggregate: Generate a statistical summary of the prices of items in your users' shopping carts
+SearchResults<DomainObject> results =
+        client.searchCollection("shopping_cart")
+              .aggregate(Aggregate.builder()
+                  .stats("value.items.price")
+                  .build()
+              )
+              .get(DomainObject.class, "*")
+              .get();
+
+// Range Aggregate: Create a range histogram of user ratings for a particular product
+String luceneQuery = "value.product_id:`ABC123`";
+SearchResults<DomainObject> results =
+        client.searchCollection("user_ratings")
+              .aggregate(Aggregate.builder()
+                  .range(
+                      "value.number_of_stars",
+                      Range.between(0.0, 1.0),
+                      Range.between(1.0, 2.0),
+                      Range.between(2.0, 3.0),
+                      Range.between(3.0, 4.0),
+                      Range.between(4.0, 5.0)
+                  )
+                  .build()
+              )
+              .get(DomainObject.class, luceneQuery)
+              .get();
+
+// Distance Aggregate: Count the number of Chinese restaurants within various distance ranges (0 - 1 km, 1 - 2 km, etc)
+String luceneQuery = "value.cuisine:chinese AND value.location:NEAR:{ lat:12.34 lon:56.78 dist:5km }";
+SearchResults<DomainObject> results =
+        client.searchCollection("restaurants")
+              .aggregate(Aggregate.builder()
+                  .distance(
+                      "value.location",
+                      Range.between(0.0, 1.0),
+                      Range.between(1.0, 2.0),
+                      Range.between(2.0, 3.0),
+                      Range.between(3.0, 4.0),
+                      Range.between(4.0, 5.0)
+                  )
+                  .build()
+              )
+              .get(DomainObject.class, luceneQuery)
+              .get();
+
+// TimeSeries Aggregate: Count the number new users per day, over the past 30 days
+String luceneQuery = "value.signup_date:[2014-11-01 TO 2014-12-01]";
+SearchResults<DomainObject> results =
+        client.searchCollection("users")
+              .aggregate(Aggregate.builder()
+                  .timeSeries("value.signup_date", TimeInterval.DAY)
+                  .build()
+              )
+              .get(DomainObject.class, luceneQuery)
+              .get();
+```
+
+You can include multiple different aggregate functions in a single query by chaining calls to
+the AggregateBuilder. For example, this query includes both a Statistical and Range aggregate
+on the same field, as well as two different TimeSeries aggregates, with different intervals and
+different fields:
+
+```java
+String luceneQuery = "value.performer:radiohead";
+SearchResults<DomainObject> results =
+        client.searchCollection("concert_tickets")
+              .aggregate(Aggregate.builder()
+                  .stats("value.sale_price")
+                  .range(
+                      "value.sale_price"
+                      Range.below(25),
+                      Range.between(25, 50),
+                      Range.between(50, 75),
+                      Range.between(75, 100),
+                      Range.above(100)
+                  )
+                  .timeSeries("value.performance_date", TimeInterval.MONTH)
+                  .timeSeries("value.transaction_date", TimeInterval.DAY)
+                  .build()
+              )
+              .get(DomainObject.class, luceneQuery)
+              .get();
+```
+
 ## <a name="events"></a> [Events](#events)
 
 In the Orchestrate.io service, an event is a time ordered piece of data you want
