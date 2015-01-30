@@ -163,12 +163,9 @@ public final class AggregateTest extends BaseClientTest {
                       .offset(0).limit(0)
                       .aggregate(Aggregate.builder().distance(
                           "value",
-                          Range.below(-10),
-                          Range.between(-10, 0),
-                          Range.between(0, 2),
-                          Range.between(2, 4),
-                          Range.between(4, 10),
-                          Range.above(10)
+                          Range.between(0, 112),
+                          Range.between(112, 224),
+                          Range.above(224)
                       ).build())
                       .get(String.class, "value:NEAR:{lat:0 lon:0 dist:500km }")
                       .get();
@@ -242,6 +239,55 @@ public final class AggregateTest extends BaseClientTest {
         assertTimeSeriesBucketEquals(buckets.get(1), "2014-12-02", 2L);
         assertTimeSeriesBucketEquals(buckets.get(2), "2014-12-03", 1L);
         assertTimeSeriesBucketEquals(buckets.get(3), "2014-12-04", 3L);
+    }
+
+    @Test
+    public void testTimeSeriesDayAggregateWithTimeZone() throws InterruptedException {
+        KvMetadata kvMetadata;
+        // Each degree of longitude is equal to about 111.32 km at the equator
+        kvMetadata = client.kv(collection(), "key1").put("{\"some_date\":\"2014-12-01T05:15:21.123Z\"}").get();
+        kvMetadata = client.kv(collection(), "key2").put("{\"some_date\":\"2014-12-02T07:55:19.433Z\"}").get();
+        kvMetadata = client.kv(collection(), "key3").put("{\"some_date\":\"2014-12-02T18:48:35.909Z\"}").get();
+        kvMetadata = client.kv(collection(), "key4").put("{\"some_date\":\"2014-12-03T12:01:21.451Z\"}").get();
+        kvMetadata = client.kv(collection(), "key5").put("{\"some_date\":\"2014-12-04T16:40:56.202Z\"}").get();
+        kvMetadata = client.kv(collection(), "key6").put("{\"some_date\":\"2014-12-04T18:33:36.555Z\"}").get();
+        kvMetadata = client.kv(collection(), "key7").put("{\"some_date\":\"2014-12-04T22:20:04.753Z\"}").get();
+
+        // give time for the writes to hit the search index
+        Thread.sleep(1000);
+
+        final SearchResults<String> results =
+                client.searchCollection(kvMetadata.getCollection())
+                      .aggregate(Aggregate.builder()
+                          .timeSeries("value.some_date", TimeInterval.DAY, "+1100")
+                          .build()
+                      )
+                      .offset(0).limit(0)
+                      .get(String.class, "*")
+                      .get();
+
+        assertNotNull(results);
+        assertNotNull(results.getAggregates());
+        assertNotNull(results.getAggregates().iterator());
+        assertTrue(results.getAggregates().iterator().hasNext());
+
+        Iterator<AggregateResult> i = results.getAggregates().iterator();
+        AggregateResult aggregate = i.next();
+
+        assertNotNull(aggregate);
+        assertTrue(aggregate instanceof TimeSeriesAggregateResult);
+        TimeSeriesAggregateResult timeSeries = (TimeSeriesAggregateResult) aggregate;
+
+        assertEquals(timeSeries.getAggregateKind(), "time_series");
+        assertEquals(timeSeries.getFieldName(), "value.some_date");
+        assertEquals(timeSeries.getValueCount(), 7L);
+        //assertEquals(timeSeries.getInterval(), "day");
+
+        List<TimeSeriesBucket> buckets = timeSeries.getBuckets();
+        assertTimeSeriesBucketEquals(buckets.get(0), "2014-12-01", 1L);
+        assertTimeSeriesBucketEquals(buckets.get(1), "2014-12-02", 1L);
+        assertTimeSeriesBucketEquals(buckets.get(2), "2014-12-03", 2L);
+        assertTimeSeriesBucketEquals(buckets.get(3), "2014-12-05", 3L);
     }
 
     private static final void assertTimeSeriesBucketEquals(TimeSeriesBucket bucket, String value, long count) {

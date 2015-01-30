@@ -15,16 +15,20 @@ public class TimeSeriesAggregateResult extends AggregateResult {
 
     private final TimeInterval interval;
 
+    private final String timeZone;
+
     private final List<TimeSeriesBucket> buckets;
 
     TimeSeriesAggregateResult(
         String fieldName,
         long valueCount,
         TimeInterval interval,
+        String timeZone,
         List<TimeSeriesBucket> buckets
     ) {
         super(fieldName, "time_series", valueCount);
         this.interval = interval;
+        this.timeZone = timeZone;
         this.buckets = buckets;
     }
 
@@ -35,6 +39,15 @@ public class TimeSeriesAggregateResult extends AggregateResult {
      */
     public TimeInterval getInterval() {
         return interval;
+    }
+
+    /**
+     * Returns the time-zone offset string for this TimeSeries
+     *
+     * @return The time-zone offset string  object.
+     */
+    public String getTimeZone() {
+        return timeZone;
     }
 
     /**
@@ -56,6 +69,10 @@ public class TimeSeriesAggregateResult extends AggregateResult {
         assert aggregateKind.equals("time_series");
 
         TimeInterval interval = TimeInterval.valueOf(json.get("interval").asText().toUpperCase());
+        String timeZone = null;
+        if (json.has("time_zone")) {
+            timeZone = json.get("time_zone").asText();
+        }
         ArrayNode bucketNodes = (ArrayNode) json.get("buckets");
         List<TimeSeriesBucket> buckets = new ArrayList<TimeSeriesBucket>(bucketNodes.size());
         for (JsonNode bucketNode : bucketNodes) {
@@ -64,7 +81,7 @@ public class TimeSeriesAggregateResult extends AggregateResult {
             buckets.add(new TimeSeriesBucket(bucket, count));
         }
 
-        return new TimeSeriesAggregateResult(fieldName, valueCount, interval, buckets);
+        return new TimeSeriesAggregateResult(fieldName, valueCount, interval, timeZone, buckets);
     }
 
 }

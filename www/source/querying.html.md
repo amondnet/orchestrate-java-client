@@ -668,12 +668,13 @@ SearchResults<DomainObject> results =
               .get(DomainObject.class, luceneQuery)
               .get();
 
-// TimeSeries Aggregate: Count the number new users per day, over the past 30 days
+// TimeSeries Aggregate: Count the number new users per day, over the past 30 days,
+// in my local time zone, "-0800" (Pacific Standard Time is eight hours behind UTC).
 String luceneQuery = "value.signup_date:[2014-11-01 TO 2014-12-01]";
 SearchResults<DomainObject> results =
         client.searchCollection("users")
               .aggregate(Aggregate.builder()
-                  .timeSeries("value.signup_date", TimeInterval.DAY)
+                  .timeSeries("value.signup_date", TimeInterval.DAY, "-0800")
                   .build()
               )
               .get(DomainObject.class, luceneQuery)
