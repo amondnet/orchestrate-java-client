@@ -151,7 +151,8 @@ public class Aggregate {
     }
 
     /**
-     * Adds a time-series aggregate to the query for the given field name
+     * Adds a time-series aggregate to the query for the given field name,
+     * with bucket intervals based on the UTC time zone.
      *
      * <p>
      * {@code
@@ -170,6 +171,36 @@ public class Aggregate {
      * @return This request.
      */
     public Aggregate timeSeries(final String fieldName, TimeInterval interval) {
+        return timeSeries(fieldName, interval, null);
+    }
+
+    /**
+     * Adds a time-series aggregate to the query for the given field name,
+     * with bucket intervals based on the designated time zone.
+     * 
+     * Time zone strings must begin with a "+" or "-" character, followed by
+     * four digits representing the hours and minutes of offset, relative to
+     * UTC. For example, Eastern Standard Time (EST) would be represented as
+     * "-0500", since the time in EST is five hours behind that of UTC. 
+     *
+     * <p>
+     * {@code
+     * client.searchCollection("someCollection")
+     *     .aggregate(Aggregate.builder()
+     *         .timeSeries("value.date_of_birth", TimeInterval.MONTH, "-0500")
+     *         .build()
+     *     )
+     *     .get(String.class, "*")
+     *     .get()
+     * }
+     * </p>
+     *
+     * @param fieldName The fully-qualified name of the field to aggregate upon
+     * @param interval The time interval to bucket upon
+     * @param timeZone The time zone to use when computing interval bucket boundaries
+     * @return This request.
+     */
+    public Aggregate timeSeries(final String fieldName, TimeInterval interval, String timeZone) {
         checkNotNull(fieldName, "fieldName");
         checkNotNull(interval, "interval");
         if (b.length() > 0) {
@@ -178,6 +209,10 @@ public class Aggregate {
         b.append(fieldName);
         b.append(":time_series:");
         b.append(interval.toString().toLowerCase());
+        if (timeZone != null) {
+            b.append(':');
+            b.append(timeZone);
+        }
         return this;
     }
 }

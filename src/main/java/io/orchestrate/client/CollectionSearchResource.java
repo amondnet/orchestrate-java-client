@@ -99,7 +99,7 @@ public class CollectionSearchResource extends BaseResource {
             query = query.concat("&sort=").concat(sortFields);
         }
         if (aggregateFields != null) {
-            query = query.concat("&aggregate=").concat(aggregateFields);
+            query = query.concat("&aggregate=").concat(client.encode(aggregateFields));
         }
 
         final HttpContent packet = HttpRequestPacket.builder()
