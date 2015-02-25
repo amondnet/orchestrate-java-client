@@ -43,13 +43,13 @@ public final class EventTest extends BaseClientTest {
     public void putEvent(@ForAll(sampleSize=10) final String type) {
         assumeThat(type, not(isEmptyString()));
 
-        final Boolean result =
+        final EventMetadata eventMetadata =
                 client.event(collection(), "key")
                       .type(type)
-                      .put("{}")
+                      .create("{}")
                       .get();
 
-        assertTrue(result);
+        assertNotNull(eventMetadata);
     }
 
     @Theory
@@ -57,24 +57,24 @@ public final class EventTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(type, not(isEmptyString()));
 
-        final BlockingQueue<Boolean> queue = DataStructures.getLTQInstance(Boolean.class);
+        final BlockingQueue<EventMetadata> queue = DataStructures.getLTQInstance(EventMetadata.class);
         client.event(collection(), "key")
               .type(type)
-              .put("{}")
-              .on(new ResponseAdapter<Boolean>() {
+              .create("{}")
+              .on(new ResponseAdapter<EventMetadata>() {
                   @Override
                   public void onFailure(final Throwable error) {
                       fail(error.getMessage());
                   }
 
                   @Override
-                  public void onSuccess(final Boolean object) {
+                  public void onSuccess(final EventMetadata object) {
                       queue.add(object);
                   }
               });
 
-        final Boolean result = queue.poll(5000, TimeUnit.MILLISECONDS);
-        assertTrue(result);
+        final EventMetadata result = queue.poll(5000, TimeUnit.MILLISECONDS);
+        assertNotNull(result);
     }
 
     @Theory

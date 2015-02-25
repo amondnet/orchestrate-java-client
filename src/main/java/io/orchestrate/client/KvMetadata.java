@@ -21,57 +21,25 @@ import lombok.ToString;
 /**
  * A container for metadata about a KV object.
  */
-@ToString
-@EqualsAndHashCode
-public class KvMetadata {
-
-    /** The collection for this KV metadata. */
-    private final String collection;
-    /** The key for this metadata. */
-    private final String key;
-    /** The version for this metadata. */
-    private final String ref;
-
-    KvMetadata(final String collection, final String key, final String ref) {
-        assert (key != null);
-        assert (key.length() > 0);
-        assert (ref != null);
-        assert (ref.length() > 0);
-
-        this.collection = collection;
-        this.key = key;
-        this.ref = ref;
-    }
-
-    KvMetadata(final KvMetadata metadata) {
-        this(metadata.collection, metadata.key, metadata.ref);
-    }
-
+public interface KvMetadata {
     /**
      * Returns the collection this metadata belongs to.
      *
      * @return The collection of this metadata.
      */
-    public final String getCollection() {
-        return collection;
-    }
+    String getCollection();
 
     /**
      * Returns the key of this metadata.
      *
      * @return The key for this metadata.
      */
-    public final String getKey() {
-        return key;
-    }
+    String getKey();
 
     /**
      * Returns the reference (i.e. "version") of this metadata.
      *
      * @return The reference for this metadata.
      */
-    public final String getRef() {
-        return ref;
-    }
-
+    String getRef();
 }

@@ -152,6 +152,105 @@ public final class KvTest extends BaseClientTest {
     }
 
     @Theory
+    public void pojoKvPut(@ForAll(sampleSize=10) final String key) {
+        assumeThat(key, not(isEmptyString()));
+
+        User user = new User(key, "description for "+key);
+
+        final KvMetadata userKvMeta =
+                client.kv(collection(), key)
+                        .put(user)
+                        .get();
+
+        final KvObject<User> userKv =
+                client.kv(userKvMeta.getCollection(), userKvMeta.getKey())
+                        .get(User.class)
+                        .get();
+
+        assertEquals(user, userKv.getValue());
+        assertEquals(user.getDescription(), userKv.getValue().getDescription());
+    }
+
+    @Theory
+    public void pojoKvPutAsync(@ForAll(sampleSize = 10) final String key) throws InterruptedException {
+        final BlockingQueue<KvMetadata> queue = DataStructures.getLTQInstance(KvMetadata.class);
+
+        User user = new User("test1", "Some description");
+        final OrchestrateRequest<KvMetadata> addUserRequest =
+                client.kv(collection(), key)
+                        .put(user)
+                        .on(new ResponseAdapter<KvMetadata>() {
+                            @Override
+                            public void onFailure(final Throwable error) {
+                                // handle error condition
+                            }
+
+                            @Override
+                            public void onSuccess(final KvMetadata userKvMeta) {
+                                queue.add(userKvMeta);
+                            }
+                        });
+        @SuppressWarnings("unchecked")
+        final KvMetadata kvMetadata = queue.poll(5000, TimeUnit.MILLISECONDS);
+
+        assertNotNull(kvMetadata);
+    }
+
+    @Theory
+    public void pojoKvGet(@ForAll(sampleSize = 10) final String key) throws InterruptedException {
+        User user = new User(key, "description for "+key);
+
+        final KvMetadata userKvMeta =
+                client.kv(collection(), key)
+                        .put(user)
+                        .get();
+
+        KvObject<User> userKv = client.kv(collection(), key)
+                .get(User.class)
+                .get();
+
+        assertNotNull(userKv);
+    }
+
+    @Theory
+    public void pojoKvGetAsync(@ForAll(sampleSize = 10) final String key) throws InterruptedException {
+        User user = new User(key, "description for "+key);
+
+        final KvMetadata userKvMeta =
+                client.kv(collection(), key)
+                        .put(user)
+                        .get();
+
+        final BlockingQueue<KvObject> queue = DataStructures.getLTQInstance(KvObject.class);
+
+        final OrchestrateRequest<KvObject<User>> getUserRequest = client.kv(collection(), key)
+                .get(User.class)
+                .on(new ResponseAdapter<KvObject<User>>() {
+                    @Override
+                    public void onFailure(final Throwable error) {
+                        // handle error condition
+                    }
+
+                    @Override
+                    public void onSuccess(final KvObject<User> userKv) {
+                        queue.add(userKv);
+                        User user = userKv.getValue();
+                        String userKey = userKv.getKey();
+                        String userRef = userKv.getRef();
+
+                        System.out.println(String.format(
+                                "Read user key:%s, name:%s, ref:%s",
+                                userKey, userRef, user.getName()
+                        ));
+                    }
+                });
+        @SuppressWarnings("unchecked")
+        final KvObject userKv = queue.poll(5000, TimeUnit.MILLISECONDS);
+
+        assertNotNull(userKv);
+    }
+
+    @Theory
     public void getKeyWithInvalidApiKey(@ForAll(sampleSize=2) final String key) throws InterruptedException {
         assumeThat(key, not(isEmptyString()));
 

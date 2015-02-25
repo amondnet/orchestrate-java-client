@@ -16,42 +16,25 @@
 
 package io.orchestrate.client;
 
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true)
-public class EventMetadata extends KvMetadata {
-    private final Long timestamp;
-    private final String ordinal;
-    private final String type;
-
-    EventMetadata(String collection, String key, String eventType, Long timestamp, String ordinal, String ref) {
-        super(collection, key, ref);
-        this.timestamp = timestamp;
-        this.ordinal = ordinal;
-        this.type = eventType;
-    }
-
-    public String getType() {
-        return type;
-    }
+public interface EventMetadata extends KvMetadata {
+    /**
+     * Returns the type of this event.
+     *
+     * @return The type for this event.
+     */
+    String getType();
 
     /**
      * Returns the timestamp of this event.
      *
      * @return The timestamp for this event.
      */
-    public Long getTimestamp() {
-        return timestamp;
-    }
+    Long getTimestamp();
 
     /**
      * Returns the ordinal of this event.
      *
      * @return The ordinal for this event.
      */
-    public String getOrdinal() {
-        return ordinal;
-    }
+    String getOrdinal();
 }

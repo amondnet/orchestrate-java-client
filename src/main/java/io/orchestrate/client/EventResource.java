@@ -264,7 +264,7 @@ public class EventResource extends BaseResource {
                     final String ref = header.getHeader(Header.ETag)
                             .replace("\"", "")
                             .replace("-gzip", "");
-                    return new EventMetadata(collection, key, type, timestamp, ordinal, ref);
+                    return new Event<Void>(mapper, collection, key, type, timestamp, ordinal, ref, null, null, null);
                 }
                 return null;
             }
