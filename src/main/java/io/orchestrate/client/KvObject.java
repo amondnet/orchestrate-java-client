@@ -16,29 +16,51 @@
 package io.orchestrate.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+
+import java.io.IOException;
 
 /**
  * A container for a KV object.
  *
  * @param <T> The deserializable type for the value of this KV object.
  */
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true)
-public class KvObject<T> extends KvMetadata {
+@ToString
+@EqualsAndHashCode
+public class KvObject<T> implements KvMetadata {
     private final ObjectMapper mapper;
+
+    /** The collection for this KV metadata. */
+    private final String collection;
+    /** The key for this metadata. */
+    private final String key;
+    /** The version for this metadata. */
+    private final String ref;
 
     /** The value for this KV object. */
     private final T value;
     /** The raw JSON value for this KV object. */
     private String rawValue;
+    private JsonNode valueNode;
 
-    KvObject(final ObjectMapper mapper, final KvMetadata metadata, final T value, final String rawValue) {
-        super(metadata.getCollection(), metadata.getKey(), metadata.getRef());
+    KvObject(final String collection, final String key, final String ref,
+             final ObjectMapper mapper, final T value,
+             final JsonNode valueNode, final String rawValue) {
+        assert (key != null);
+        assert (key.length() > 0);
+        assert (ref != null);
+        assert (ref.length() > 0);
+
+        this.collection = collection;
+        this.key = key;
+        this.ref = ref;
+
         this.mapper = mapper;
         this.value = value;
+        this.valueNode = valueNode;
         this.rawValue = rawValue;
     }
 
@@ -52,18 +74,73 @@ public class KvObject<T> extends KvMetadata {
     }
 
     /**
+     * Returns the value of this KV object, mapped to the provided Class.
+     * This is useful in cases where results may be of mixed types (eg
+     * if a search request includes items and events). The original value
+     * json will be deserialized to the provided type.
+     *
+     * <p>
+     * To get the value as the raw json, call with String.class
+     * <pre>
+     * {@code
+     * String json = kv.getValue(String.class);
+     * }
+     * </p>
+     * <p>
+     * This is equivalent to calling getRawValue. Other common use cases are
+     * Map.class (to just get the json as a nested hashmap), or a POJO class
+     * of your own (for example a simple User java bean class).
+     * </p>
+     *
+     * @return The value of the KV object, may be {@code null}.
+     */
+    public <T> T getValue(Class<T> clazz) {
+        if (valueNode == null) {
+            return null;
+        }
+
+        if (rawValue == null && value != null && clazz.equals(String.class)) {
+            rawValue = (String)value;
+        }
+
+        try {
+            return ResponseConverterUtil.jsonToDomainObject(mapper, valueNode, rawValue, clazz);
+        } catch (IOException e) {
+            throw new ClientException("Could not convert response to JSON.", e);
+        }
+    }
+
+    /**
      * Returns the raw JSON value of this KV object.
      *
      * @return The raw JSON value of this KV object, may be {@code null}.
      */
     public final String getRawValue() {
-        if (rawValue == null && value != null) {
-            try {
-                rawValue = mapper.writeValueAsString(value);
-            } catch (JsonProcessingException ignored) {
+        if (rawValue == null) {
+            if (valueNode != null) {
+                rawValue = getValue(String.class);
+            } else if (value != null) {
+                try {
+                    rawValue = mapper.writeValueAsString(value);
+                } catch (JsonProcessingException ignored) {
+                }
             }
         }
         return rawValue;
     }
 
+    @Override
+    public String getCollection() {
+        return collection;
+    }
+
+    @Override
+    public String getKey() {
+        return key;
+    }
+
+    @Override
+    public String getRef() {
+        return ref;
+    }
 }

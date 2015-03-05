@@ -23,10 +23,7 @@ import org.glassfish.grizzly.http.HttpResponsePacket;
 import org.glassfish.grizzly.http.Method;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import static io.orchestrate.client.Preconditions.*;
 
@@ -34,6 +31,7 @@ import static io.orchestrate.client.Preconditions.*;
  * The resource for the collection search features in the Orchestrate API.
  */
 public class CollectionSearchResource extends BaseResource {
+    private static final String QUERY_WITH_KIND = "@path.kind:(%s) AND (%s)";
 
     /** The name of the collection to search. */
     private final String collection;
@@ -47,6 +45,8 @@ public class CollectionSearchResource extends BaseResource {
     private String sortFields;
     /** The aggregate functions to include in this query. */
     private String aggregateFields;
+    /** The 'kinds' to be searched ('item' or 'event') */
+    private String kinds;
 
     CollectionSearchResource(
             final OrchestrateClient client,
@@ -62,6 +62,37 @@ public class CollectionSearchResource extends BaseResource {
         this.withValues = true;
         this.sortFields = null;
         this.aggregateFields = null;
+        this.kinds = null;
+    }
+
+    /**
+     * Send the search request to Orchestrate, without deserializing the Values. This is
+     * useful for cases where the results may be of mixed types (eg if the search includes
+     * items and events in the same query). The Result values can be individually
+     * deserialized (perhaps based on some indicator in the KvMetadata) by calling
+     * {@link KvObject#getValue(Class clazz) KvObject.getValue}
+     * <p>Usage:</p>
+     * <pre>
+     * {@code
+     * String luceneQuery = "*";
+     * SearchResults&lt;Void&gt; results1 =
+     *         client.searchCollection("someCollection")
+     *               .sort("value.name.last:asc")
+     *               .get(luceneQuery)
+     *               .get();
+     * }
+     * for (Result&lt;Void&gt; result : results1.getResults()) {
+     *     // gets the results 'value' as a String, which will be the json string.
+     *     System.out.println(result.getValue(String.class));
+     * }
+     * }
+     * </pre>
+     *
+     * @param luceneQuery The lucene search query.
+     * @return The prepared search request.
+     */
+    public OrchestrateRequest<SearchResults<Void>> get(final String luceneQuery) {
+        return get(Void.class, luceneQuery);
     }
 
     /**
@@ -91,21 +122,26 @@ public class CollectionSearchResource extends BaseResource {
         checkNotNull(clazz, "clazz");
         checkNotNullOrEmpty(luceneQuery, "luceneQuery");
 
-        String query = "query=".concat(client.encode(luceneQuery))
-                .concat("&limit=").concat(limit + "")
-                .concat("&offset=").concat(offset + "")
-                .concat("&values=").concat(Boolean.toString(withValues));
+        StringBuilder buff = new StringBuilder("query=");
+        if (this.kinds != null) {
+            buff.append(client.encode(String.format(QUERY_WITH_KIND, this.kinds, luceneQuery)));
+        } else {
+            buff.append(client.encode(luceneQuery));
+        }
+        buff.append("&limit=").append(limit)
+            .append("&offset=").append(offset)
+            .append("&values=").append(Boolean.toString(withValues));
         if (sortFields != null) {
-            query = query.concat("&sort=").concat(sortFields);
+            buff.append("&sort=").append(client.encode(sortFields));
         }
         if (aggregateFields != null) {
-            query = query.concat("&aggregate=").concat(client.encode(aggregateFields));
+            buff.append("&aggregate=").append(client.encode(aggregateFields));
         }
 
         final HttpContent packet = HttpRequestPacket.builder()
                 .method(Method.GET)
                 .uri(client.uri(collection))
-                .query(query)
+                .query(buff.toString())
                 .build()
                 .httpContentBuilder()
                 .build();
@@ -252,4 +288,40 @@ public class CollectionSearchResource extends BaseResource {
         return this;
     }
 
+    /**
+     * Specify what 'kind' of objects to query. This is a helper method to set up the
+     * '@path.kind' predicate in the query. By default, no @path.kind predicate is used,
+     * and Orchestrate currently defaults to returning only 'item's. Currently, only
+     * 'item' and/or 'event' can be specified.
+     *
+     * @param kinds The kinds to query (valid values are currently 'item', and 'event').
+     * @return This request.
+     */
+    public CollectionSearchResource kinds(final String...kinds) {
+        if (kinds == null || kinds.length == 0){
+            this.kinds = null;
+            return this;
+        }
+
+        boolean includeEvent = false;
+        boolean includeItem = false;
+        for (String kind : kinds) {
+            if ("item".equals(kind)) {
+                includeItem = true;
+            } else if("event".equals(kind)) {
+                includeEvent = true;
+            } else {
+                throw new IllegalArgumentException("'kind' must be one of [item, event].");
+            }
+        }
+
+        if (includeItem && includeEvent) {
+            this.kinds = "item event";
+        } else if(includeItem) {
+            this.kinds = "item";
+        } else {
+            this.kinds = "event";
+        }
+        return this;
+    }
 }

@@ -61,7 +61,7 @@ abstract class BaseResource {
     }
 
     protected <T> KvObject<T> toKvObject(JsonNode result, Class<T> clazz) throws IOException {
-        return ResponseConverterUtil.jsonToKvObject(mapper, result, clazz);
+        return ResponseConverterUtil.wrapperJsonToKvObject(mapper, result, clazz);
     }
 
     protected <T> KvObject<T> toKvObject(HttpContent response, String collection, String key,

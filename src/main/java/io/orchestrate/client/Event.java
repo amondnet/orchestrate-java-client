@@ -15,7 +15,7 @@
  */
 package io.orchestrate.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -26,46 +26,31 @@ import lombok.ToString;
  * @param <T> The deserializable type for the value of the KV data belonging
  *            to this event.
  */
-@ToString
+@ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-public class Event<T> extends EventMetadata {
-
-    private final ObjectMapper mapper;
-    /** The value for this event. */
-    private final T value;
-    /** The raw JSON value for this event. */
-    private String rawValue;
+public class Event<T> extends KvObject<T> implements EventMetadata {
+    private final Long timestamp;
+    private final String ordinal;
+    private final String type;
 
     Event(final ObjectMapper mapper, final String collection, final String key, final String type,
-          final Long timestamp, final String ordinal, final String ref, final T value, final String rawValue) {
-        super(collection, key, type, timestamp, ordinal, ref);
-        this.mapper = mapper;
-        this.value = value;
-        // rawValue should not be 'final' b/c it will be lazy created when 'T' is not String
-        this.rawValue = rawValue;
+          final Long timestamp, final String ordinal, final String ref, final T value,
+          final JsonNode valueNode, final String rawValue) {
+        super(collection, key, ref, mapper, value, valueNode, rawValue);
+        this.timestamp = timestamp;
+        this.ordinal = ordinal;
+        this.type = type;
     }
 
-    /**
-     * Returns the KV object for this event.
-     *
-     * @return The KV object for this event.
-     */
-    public final T getValue() {
-        return value;
+    public String getType() {
+        return type;
     }
 
-    /**
-     * Returns the raw JSON value of this event.
-     *
-     * @return The raw JSON value of this event.
-     */
-    public final String getRawValue() {
-        if (rawValue == null && value != null) {
-            try {
-                rawValue = mapper.writeValueAsString(value);
-            } catch (JsonProcessingException ignored) {
-            }
-        }
-        return rawValue;
+    public Long getTimestamp() {
+        return timestamp;
+    }
+
+    public String getOrdinal() {
+        return ordinal;
     }
 }

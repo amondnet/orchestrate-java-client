@@ -56,6 +56,28 @@ public class Result<T> {
     }
 
     /**
+     * Test whether the result kvObject is an Event.
+     *
+     * @return true if the result is an Event.
+     */
+    public final boolean isEvent() {
+        return kvObject instanceof Event;
+    }
+
+    /**
+     * Get the result kvObject as an Event. If the result is not an Event, an
+     * IllegalStateException will be thrown.
+     *
+     * @return the result kvObject as an Event.
+     */
+    public final Event<T> getEventObject() {
+        if(!isEvent()) {
+            throw new IllegalStateException("Item is not an event.");
+        }
+        return (Event<T>)kvObject;
+    }
+
+    /**
      * Returns the score of this search results.
      *
      * @return The score for this result.

@@ -19,6 +19,10 @@ import io.orchestrate.client.*;
 import org.glassfish.grizzly.utils.DataStructures;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -118,12 +122,14 @@ public final class SearchTest extends BaseClientTest {
                 client.searchCollection(kvMetadata1.getCollection())
                       .limit(10)
                       .offset(0)
+                      .sort("key")
                       .get(String.class, "*")
                       .get();
 
         final SearchResults<String> results2 =
                 client.searchCollection(kvMetadata1.getCollection())
                       .offset(1)
+                      .sort("key")
                       .get(String.class, "*")
                       .get();
 
@@ -244,4 +250,206 @@ public final class SearchTest extends BaseClientTest {
         assertEquals(new Double(0), result.getDistance());
     }
 
+    @Test
+    public void searchEvents() throws InterruptedException {
+        String collection = collection();
+        int numEvents = 5;
+        for(int i=0;i<numEvents;i++) {
+                client.event(collection, "key")
+                        .type("type_1")
+                        .create("{}")
+                        .get();
+        }
+
+        // give time for the write to hit the search index
+        Thread.sleep(3000);
+
+        final SearchResults<Void> results =
+                client.searchCollection(collection)
+                        .get("@path.kind:event")
+                        .get();
+
+        assertEquals(numEvents, results.getTotalCount());
+        for(Result<Void> result : results.getResults()) {
+            assertTrue(result.getKvObject() instanceof Event);
+            assertEquals("type_1", ((Event)result.getKvObject()).getType());
+        }
+    }
+
+    @Test
+    public void searchEventsWithKindsMethod() throws InterruptedException {
+        String collection = collection();
+        int numEvents = 5;
+        for(int i=0;i<numEvents;i++) {
+            client.event(collection, "key")
+                    .type("type_1")
+                    .create("{}")
+                    .get();
+        }
+
+        // give time for the write to hit the search index
+        Thread.sleep(3000);
+
+        final SearchResults<Void> results =
+                client.searchCollection(collection)
+                        .kinds("event")
+                        .get("*")
+                        .get();
+
+        assertEquals(numEvents, results.getTotalCount());
+        for(Result<Void> result : results.getResults()) {
+            assertTrue(result.getKvObject() instanceof Event);
+            assertEquals("type_1", ((Event)result.getKvObject()).getType());
+        }
+    }
+
+    @Test
+    public void searchEventsByType() throws InterruptedException {
+        String collection = collection();
+        int numEvents = 5;
+        for(int i=0;i<numEvents;i++) {
+            client.event(collection, "key")
+                    .type("type_"+i)
+                    .create("{}")
+                    .get();
+        }
+
+        // give time for the write to hit the search index
+        Thread.sleep(3000);
+
+        final SearchResults<Void> results =
+                client.searchCollection(collection)
+                        .get("@path.kind:event AND @path.type:type_1")
+                        .get();
+
+        assertEquals(1, results.getTotalCount());
+        Result<Void> result = firstResult(results);
+        assertEquals("type_1", ((Event)result.getKvObject()).getType());
+    }
+
+    private static final Random RAND = new Random();
+
+    @Test
+    public void searchEventsAndItems() throws InterruptedException {
+        String collection = collection();
+        int numValues = 5;
+        for(int i=0;i<numValues;i++) {
+            String key = Long.toHexString(RAND.nextLong());
+            String value = "{\"val\":\"val_"+i+"\"}";
+
+            // write item with the test value.
+            client.kv(collection, key).put(value).get();
+
+            // write events to another key, with the same value.
+            key = Long.toHexString(RAND.nextLong());
+            client.event(collection, key)
+                    .type("type_1")
+                    .create(value)
+                    .get();
+        }
+
+        // give time for the write to hit the search index
+        Thread.sleep(3000);
+
+        final SearchResults<Void> results =
+                client.searchCollection(collection)
+                        .sort("@path.kind")  // this is so the event will come first.
+                        .get("@path.kind:(item event) AND val:`val_1`")
+                        .get();
+
+        assertEquals(2, results.getTotalCount());
+        List<Result<Void>> resultList = toList(results);
+        assertTrue(resultList.get(0).getKvObject() instanceof Event);
+        assertFalse(resultList.get(1).getKvObject() instanceof Event);
+    }
+
+    @Test
+    public void searchEventsAndItemsViaKindsMethod() throws InterruptedException {
+        String collection = collection();
+        int numValues = 5;
+        for(int i=0;i<numValues;i++) {
+            String key = Long.toHexString(RAND.nextLong());
+            String value = "{\"val\":\"val_"+i+"\"}";
+
+            // write item with the test value.
+            client.kv(collection, key).put(value).get();
+
+            // write events to another key, with the same value.
+            key = Long.toHexString(RAND.nextLong());
+            client.event(collection, key)
+                    .type("type_1")
+                    .create(value)
+                    .get();
+        }
+
+        // give time for the write to hit the search index
+        Thread.sleep(3000);
+
+        final SearchResults<Void> results =
+                client.searchCollection(collection)
+                        .sort("@path.kind")  // this is so the event will come first.
+                        .kinds("item", "event")
+                        .get("val:`val_1`")
+                        .get();
+
+        assertEquals(2, results.getTotalCount());
+        List<Result<Void>> resultList = toList(results);
+        assertTrue(resultList.get(0).getKvObject() instanceof Event);
+        assertFalse(resultList.get(1).getKvObject() instanceof Event);
+    }
+
+    @Test
+    public void searchEventsAndItemsPojo() throws InterruptedException, IOException {
+        String collection = collection();
+        int numValues = 5;
+        for(int i=0;i<numValues;i++) {
+            String key = Long.toHexString(RAND.nextLong());
+            String desc = "This is description test_"+i;
+
+            // write item with the test desc.
+            client.kv(collection, key).put(new User(key, desc)).get();
+
+            // write events to another key, with the same desc.
+            key = Long.toHexString(RAND.nextLong());
+            client.event(collection, key)
+                    .type("type_1")
+                    .create(new LogItem(key, desc))
+                    .get();
+        }
+
+        // give time for the write to hit the search index
+        Thread.sleep(3000);
+
+        final SearchResults<Void> results =
+                client.searchCollection(collection)
+                        .sort("@path.kind")  // this is so the event will come first.
+                        .get("@path.kind:(item event) AND description:test_1")
+                        .get();
+
+        assertEquals(2, results.getTotalCount());
+        List<Result<Void>> resultList = toList(results);
+
+        assertTrue(resultList.get(0).getKvObject() instanceof Event);
+        LogItem log = resultList.get(0).getKvObject().getValue(LogItem.class);
+        assertTrue(log.getDescription().contains("test_1"));
+
+        assertFalse(resultList.get(1).getKvObject() instanceof Event);
+        User user = resultList.get(1).getKvObject().getValue(User.class);
+        assertTrue(user.getDescription().contains("test_1"));
+    }
+
+    private <T> Result<T> firstResult(SearchResults<T> results) {
+        for(Result<T> r : results.getResults()) {
+            return r;
+        }
+        return null;
+    }
+
+    private <T> List<Result<T>> toList(SearchResults<T> results) {
+        List<Result<T>> l = new ArrayList<Result<T>>(results.getCount());
+        for (Result<T> r : results.getResults()) {
+            l.add(r);
+        }
+        return l;
+    }
 }

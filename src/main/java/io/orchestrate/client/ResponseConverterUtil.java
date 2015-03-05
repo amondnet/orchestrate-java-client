@@ -15,6 +15,7 @@
  */
 package io.orchestrate.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -26,7 +27,7 @@ import java.io.IOException;
  */
 final class ResponseConverterUtil {
 
-    static <T> KvObject<T> jsonToKvObject(
+    static <T> KvObject<T> wrapperJsonToKvObject(
             final ObjectMapper mapper, final JsonNode jsonNode, final Class<T> clazz)
             throws IOException {
         assert (mapper != null);
@@ -36,6 +37,10 @@ final class ResponseConverterUtil {
         // parse the PATH structure (e.g.):
         // {"collection":"coll","key":"aKey","ref":"someRef"}
         final JsonNode path = jsonNode.get("path");
+        if ("event".equals(path.get("kind").asText())) {
+            return wrapperJsonToEvent(mapper, jsonNode, clazz);
+        }
+
         final String collection = path.get("collection").asText();
         final String key = path.get("key").asText();
         final String ref = path.get("ref").asText();
@@ -53,8 +58,6 @@ final class ResponseConverterUtil {
         assert (mapper != null);
         assert (clazz != null);
 
-        final KvMetadata metadata = new KvMetadata(collection, key, ref);
-
         final T value = jsonToDomainObject(mapper, valueNode, clazz);
         String rawValue = null;
 
@@ -62,7 +65,7 @@ final class ResponseConverterUtil {
             rawValue = (String)value;
         }
 
-        return new KvObject<T>(mapper, metadata, value, rawValue);
+        return new KvObject<T>(collection, key, ref, mapper, value, valueNode, rawValue);
     }
 
     @SuppressWarnings("unchecked")
@@ -71,35 +74,57 @@ final class ResponseConverterUtil {
         assert (mapper != null);
         assert (clazz != null);
 
-        final KvMetadata metadata = new KvMetadata(collection, key, ref);
+        JsonNode valueNode = null;
+        if (rawValue != null && !rawValue.isEmpty()) {
+            valueNode = mapper.readTree(rawValue);
+        }
 
-        final T value = jsonToDomainObject(mapper, rawValue, clazz);
+        final T value = jsonToDomainObject(mapper, valueNode, rawValue, clazz);
 
-        return new KvObject<T>(mapper, metadata, value, rawValue);
+        return new KvObject<T>(collection, key, ref, mapper, value, valueNode, rawValue);
     }
 
     @SuppressWarnings("unchecked")
+    @Deprecated
     public static <T> T jsonToDomainObject(ObjectMapper mapper,
                        String rawValue, Class<T> clazz) throws IOException {
-        if (rawValue != null && !rawValue.isEmpty()) {
-            if (clazz.equals(String.class) ){
+        if (clazz == null || clazz == Void.class || rawValue == null || rawValue.isEmpty()) {
+            return null;
+        }
+
+        if (clazz.equals(String.class) ){
+            return (T)rawValue;
+        }
+        return mapper.readValue(rawValue, clazz);
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T> T jsonToDomainObject(ObjectMapper mapper,
+                                           JsonNode json, String rawValue, Class<T> clazz) throws IOException {
+        if (clazz == null || clazz == Void.class || json == null || json.isNull()) {
+            return null;
+        }
+
+        if (clazz.equals(String.class) ){
+            if (rawValue != null) {
                 return (T)rawValue;
             }
-            return mapper.readValue(rawValue, clazz);
+            return (T)mapper.writeValueAsString(json);
         }
-        return null;
+        return mapper.treeToValue(json, clazz);
     }
 
     @SuppressWarnings("unchecked")
     public static <T> T jsonToDomainObject(ObjectMapper mapper,
                                            JsonNode json, Class<T> clazz) throws IOException {
-        if (json != null && !json.isNull()) {
-            if (clazz.equals(String.class) ){
-                return (T)mapper.writeValueAsString(json);
-            }
-            return mapper.treeToValue(json, clazz);
+        if (clazz == null || clazz == Void.class || json == null || json.isNull()) {
+            return null;
         }
-        return null;
+
+        if (clazz.equals(String.class) ){
+            return (T)mapper.writeValueAsString(json);
+        }
+        return mapper.treeToValue(json, clazz);
     }
 
     public static <T> Event<T> wrapperJsonToEvent(ObjectMapper mapper, JsonNode wrapperJson, Class<T> clazz) throws IOException {
@@ -124,7 +149,6 @@ final class ResponseConverterUtil {
             rawValue = (String)value;
         }
 
-        return new Event<T>(mapper, collection, key, eventType, timestamp, ordinal, ref, value, rawValue);
-
+        return new Event<T>(mapper, collection, key, eventType, timestamp, ordinal, ref, value, valueNode, rawValue);
     }
 }
