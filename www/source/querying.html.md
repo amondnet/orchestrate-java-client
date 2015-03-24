@@ -692,14 +692,25 @@ The backslashes in the first two examples are necessary to escape
 
 In the Orchestrate.io search API, any query can be optionally accompanied by a
 collection of aggregate functions, each providing a summary of the data items
-matched by the query. There are four different kinds of aggregate functions:
-Statistical, Range, Distance, and TimeSeries.
+matched by the query. There are five different kinds of aggregate functions:
+TopValues, Statistical, Range, Distance, and TimeSeries.
 
 Here are a few examples to show how to use aggregate functions in common
 scenarios. Again, `DomainObject` is just a POJO, just like our previous `User` 
 examples.
 
 ```java
+// TopValues Aggregate: Find the most common values for a field and count the
+// number of occurrences of each unique value.
+SearchResults<DomainObject> results =
+        client.searchCollection("blog_posts")
+              .aggregate(Aggregate.builder()
+                  .topValues("value.category", 0 , 10)
+                  .build()
+              )
+              .get(DomainObject.class, "*")
+              .get();
+
 // Stats Aggregate: Generate a statistical summary of the prices of items in your users' shopping carts
 SearchResults<DomainObject> results =
         client.searchCollection("shopping_cart")
