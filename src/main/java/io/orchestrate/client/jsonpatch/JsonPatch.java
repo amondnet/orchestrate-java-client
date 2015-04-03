@@ -41,43 +41,75 @@ public class JsonPatch {
     public static class Builder {
         List<JsonPatchOp> ops = new ArrayList<JsonPatchOp>();
         public Builder add(String path, Object value) {
-            ops.add(new JsonPatchOp("add", path, value));
-            return this;
+            return op(new JsonPatchOp("add", path, value));
         }
 
         public Builder test(String path, Object value) {
-            ops.add(new JsonPatchOp("test", path, value));
-            return this;
+            return op(TestOp.matches(path, value));
+        }
+
+        public Builder testNot(String path, Object value) {
+            return op(TestOp.notMatches(path, value));
+        }
+
+        public Builder testFieldPresent(String path) {
+            return op(TestOp.fieldPresent(path));
+        }
+
+        public Builder testFieldMissing(String path) {
+            return op(TestOp.fieldMissing(path));
         }
 
         public Builder move(String from, String path) {
-            ops.add(new JsonPatchOp("move", path, null, from));
-            return this;
+            return op(new JsonPatchOp("move", path, null, from));
         }
 
         public Builder copy(String from, String path) {
-            ops.add(new JsonPatchOp("copy", path, null, from));
-            return this;
+            return op(new JsonPatchOp("copy", path, null, from));
         }
 
         public Builder inc(String path) {
-            inc(path, null);
-            return this;
+            return inc(path, null);
         }
 
         public Builder inc(String path, Number value) {
-            ops.add(new JsonPatchOp("inc", path, value));
-            return this;
+            return op(new JsonPatchOp("inc", path, value));
         }
 
         public Builder remove(String path) {
-            ops.add(new JsonPatchOp("remove", path, null, null));
-            return this;
+            return op(new JsonPatchOp("remove", path, null, null));
         }
 
         public Builder replace(String path, Object value) {
-            ops.add(new JsonPatchOp("replace", path, value, null));
-            return this;
+            return op(new JsonPatchOp("replace", path, value, null));
+        }
+
+        public Builder init(String path, Object value) {
+            return op(new JsonPatchOp("init", path, value, null));
+        }
+
+        public Builder merge(String path, Object value) {
+            return op(new JsonPatchOp("merge", path, value, null));
+        }
+
+        public Builder patch(String path, JsonPatch patch) {
+            return patch(path, patch, false);
+        }
+
+        public Builder patch(String path, Builder patch) {
+            return patch(path, patch, false);
+        }
+
+        public Builder patchIf(String path, Builder patch) {
+            return patch(path, patch, true);
+        }
+
+        public Builder patch(String path, JsonPatch patch, boolean conditional) {
+            return op(new InnerPatchPatchOp(path, patch, conditional));
+        }
+
+        public Builder patch(String path, Builder patch, boolean conditional) {
+            return patch(path, patch.build(), conditional);
         }
 
         /**

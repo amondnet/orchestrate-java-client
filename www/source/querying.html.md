@@ -1,19 +1,19 @@
 The client API is designed around the concept of operations you can execute on
- the Orchestrate.io service. The client library is entirely _asynchronous_. 
+ the Orchestrate.io service. The client library is entirely _asynchronous_.
  However, most examples here show the blocking variation, because it makes the
- examples easier to understand. Please see the [Async API](#async-api) section 
+ examples easier to understand. Please see the [Async API](#async-api) section
  for more details about how the Blocking vs Non-Blocking approaches work.
 
 Under the hood the client makes `HTTP` requests to the [REST API](http://docs.orchestrate.io/).
  All data is written to the platform as [`JSON`](http://json.org/) and the client
  will handle marshalling and unmarshalling the data into Java objects.
 
-Every Key/Value object has metadata associated with it. This is the "path" metadata that 
- Orchestrate associates with the data, and includes in operation responses. The client 
- will parse this metadata and make it available either in KvMetadata objects (for most 
- create, update, and delete operations), or in the KvObject (for query operations). For 
+Every Key/Value object has metadata associated with it. This is the "path" metadata that
+ Orchestrate associates with the data, and includes in operation responses. The client
+ will parse this metadata and make it available either in KvMetadata objects (for most
+ create, update, and delete operations), or in the KvObject (for query operations). For
  query operations, the Item's value is also provided as the 'value' property of the KvObject.
- Therefore, most of the responses and response handlers in the client either provide 
+ Therefore, most of the responses and response handlers in the client either provide
  KvMetadata objects or KvObjects.
 
 ### <a name="constructing-a-client"></a> [Constructing a Client](#constructing-a-client)
@@ -70,12 +70,12 @@ Key-Value operations are the heart of the Orchestrate.io service. These are the
 
 All Key-Value operations happen in the context of a `Collection`. If the
  collection does not exist it will be _implicitly_ created when data is first
- written. 
- 
+ written.
+
 For the examples here, we will assume there is a collection called
- `users`. This collection will use emails as the users' keys. We will 
+ `users`. This collection will use emails as the users' keys. We will
  also map the response to a `User` class, which is a simple POJO class:
- 
+
 ```java
 public class User {
     private String name;
@@ -153,7 +153,7 @@ This example shows how to retrieve the value for a key from a collection and
  other metadata for the item. In the example, we show that the `key` and the `ref`
  are provided on the KvObject. The `ref` is a content-based hash that Orchestrate
  provides for the Item. This `ref` is used in Orchestrate's versioning history.
- 
+
 
 #### <a name="fetch-data-by-ref"></a> [Fetch Data by Ref](#fetch-data-by-ref)
 
@@ -206,11 +206,11 @@ KvList<User> results =
               .get();           // blocks and returns the response
 
 for (KvObject<User> userKv : results) {
-	// userKv.getValue() will be null here because we 
+	// userKv.getValue() will be null here because we
 	// requested withValues(false)
 	// other metadata is available though:
 	System.out.println(userKv.getKey()+","+userKv.getRef());
-	
+
 }
 ```
 In this case, all the metadata will be present on the KvObjects, but the `value`
@@ -236,7 +236,7 @@ System.out.println(userMeta.getRef());
 This example shows how to store a value for a key to a collection. `user` is
  serialized to JSON by the client before writing the data. If the key already
  existed in the collection, then this operation will replace the previous
- version of the item (the old version is still accessible via the 
+ version of the item (the old version is still accessible via the
  <a href="https://orchestrate.io/docs/apiref#refs">ref</a> of that version).
 
 The `KvMetadata` returned by the store operation contains information about
@@ -249,7 +249,7 @@ The `ref` metadata returned from a store operation is important, it allows
  you to perform a "Conditional PUT".
 
 ```java
-// update 'user' if the latest version 'ref' on the server matches 
+// update 'user' if the latest version 'ref' on the server matches
 // the provided 'lastRef'
 String lastRef = "a203b02a7d0b6de8"; // likely kept from an earlier operation
 try {
@@ -290,7 +290,7 @@ These "conditional store" operations are very useful in high write concurrency
 With some types of data you'll store to Orchestrate you may want to have the
  service generate keys for the values for you. This is similar to using the
  `AUTO_INCREMENT` feature from other databases. Orchestrate's generated keys
- are NOT guaranteed to be monotonically increasing. They are roughly time 
+ are NOT guaranteed to be monotonically increasing. They are roughly time
  ordered though, and may be out of order by up to 1s.
 
 To store a value to a collection with a server-generated key:
@@ -312,7 +312,7 @@ final KvMetadata updatedMeta =
         .patch(JsonPatch.builder()
             .replace("description", "Likes all code.")
             .inc("views")          // increment a 'views' counter
-            .add("tags/-","coder") // append to a 'tags' array
+            .append("tags","coder") // append to a 'tags' array
             .build()
         )
         .get();
@@ -325,9 +325,9 @@ This operation allows for updating a portion of a document by applying a
  list of operations. Each of the operations will be applied to the specified
  document in order. If any of the operations fails for any reason, then the
  patch is aborted, and none of the changes are applied.
- The response metadata will contain the new 'ref' for the updated item. For
- a full list of supported Ops, see the JsonPatch [Javadocs](/javadoc/latest/io/orchestrate/client/jsonpatch/JsonPatch.html).
-.
+ The response metadata will contain the new 'ref' for the updated item.
+ For more details on the patch feature, see the [Patch Operations Docs](https://orchestrate.io/docs/apiref#keyvalue-patch-operations).
+ For a full list of supported Ops, see the JsonPatch [Javadocs](/javadoc/latest/io/orchestrate/client/jsonpatch/JsonPatch.html).
 
 #### <a name="conditional-partial-update-data"></a> [Conditional Partial Update Data](#conditional-partial-update-data)
 This patch operation also supports the ifMatch conditional. When updating
@@ -381,11 +381,82 @@ try {
 }
 ```
 
+#### <a name="nested-patch-operation"></a> [Nested Patch Operation](#nested-patch-operation)
+The 'patch' op provides a way to specify a nested patch that should apply to a nested object in
+ the item. The operations for the nested patch will be applied to the nested value in the document in
+ the order specified (just like a normal patch). If any 'test' op fails, the nested patch fails and
+ the entire outer patch is aborted, and NONE of the ops will be 'committed' to the store.
+
+This can be useful if applying several changes to an object that is nested inside your document. The `path`
+ specified in the nested ops will be relative to the `path` indicated in the nested patch op.
+
+```java
+try {
+    final KvMetadata updatedMeta =
+        client.kv("users", "test@test.com")
+             .patch(JsonPatch.builder()
+                 .patch("profile",
+                    // these paths are relative to "profile", the path for this op
+                    JsonPatch.builder()
+                        .add("description", "Looking at swift")
+                        .inc("updated_count")
+                 )
+                 .build()
+             )
+             .get();
+
+    // print the 'ref' for the stored data
+    System.out.println(updatedMeta.getRef());
+} catch (TestOpApplyException ex) {
+   // the patch failed to apply due to a 'test' op failure.
+   System.out.println("Test op at index " + ex.getOpIndex() + " failed. Data: "+ex.getDetails().toString());
+} catch (PatchConflictException ex) {
+   // the patch failed to apply due to one of the 'path's
+   // specified in one of the ops does not exist (ie it may have
+   // been removed by another update of the item).
+   System.out.println("Patch Op at index " + ex.getOpIndex() + " failed. Data: "+ex.getDetails().toString());
+}
+```
+
+The nested patch operation can be made conditional, where it will only apply if the included `test` ops all pass.
+ A conditional nested patch will NOT abort the entire outer patch, it will simply not apply.
+
+```java
+try {
+    final KvMetadata updatedMeta =
+        client.kv("users", "test@test.com")
+             .patch(JsonPatch.builder()
+                 // patchIf makes it a conditional sub patch, will be ignored if any of its own test ops fail
+                 .patchIf("/",
+                    // these paths are relative to "/", the path for this op
+                    JsonPatch.builder()
+                        .test("role","coder")
+                        .add("profile.description", "Looking at swift")
+                 )
+                 // this will apply regardless of whether or not the prev nested patchIf applies or not
+                 .inc("profile.updated_count")
+                 .build()
+             )
+             .get();
+
+    // print the 'ref' for the stored data
+    System.out.println(updatedMeta.getRef());
+} catch (TestOpApplyException ex) {
+   // the patch failed to apply due to a 'test' op failure.
+   System.out.println("Test op at index " + ex.getOpIndex() + " failed. Data: "+ex.getDetails().toString());
+} catch (PatchConflictException ex) {
+   // the patch failed to apply due to one of the 'path's
+   // specified in one of the ops does not exist (ie it may have
+   // been removed by another update of the item).
+   System.out.println("Patch Op at index " + ex.getOpIndex() + " failed. Data: "+ex.getDetails().toString());
+}
+```
+
 #### <a name="merge-update-data"></a> [Merge Update Data](#merge-update-data)
 
 To update an Item by merging it with another (via a JsonMergePatch
- https://tools.ietf.org/html/rfc7386). 
- 
+ https://tools.ietf.org/html/rfc7386).
+
 ```java
 String changesJson = "{\"description\":\"Looking at Rust.\"}"
 final KvMetadata updatedMeta =
@@ -466,6 +537,35 @@ try {
         client.kv("someCollection", "someKey")
             .patch(JsonPatch.builder()
                 .replace("description", "Looking at Purescript.")
+                .build()
+            )
+            .get();
+} catch (PatchConflictException ex) {
+   // the patch failed to apply due to either a 'test' failure or
+   // one of the 'path's specified in one of the ops does not exist
+   // (ie it may have been removed by another update of the item).
+} catch (ItemVersionMismatchException ex) {
+   // since there was NO ifMatch value sent, this means the
+   // patch failed to apply due to too many other requests to
+   // update the same item key
+}
+
+```
+
+### <a name="upsert-data"></a> [Upsert Data](#upsert-data)
+
+`Partial Update` operations (both Merge as well as Patch) can be applied as an upsert: "update if present, otherwise insert".
+With upsert, the value provided will be inserted if it doesn't exist, otherwise it will be merged into the existing object.
+This is useful if you have a fully formed, valid object in your update (vs cases where you only want to update a subset of fields).
+
+```java
+try {
+    final KvMetadata kvMetadata =
+        client.kv("someCollection", "someKey")
+            .upsert()
+            .patch(JsonPatch.builder()
+                .add("name", "Chris")
+                .add("description", "Looking at Purescript.")
                 .build()
             )
             .get();
@@ -570,7 +670,7 @@ The query language used to perform searches is the familiar
  [Lucene Syntax](http://lucene.apache.org/core/4_3_0/queryparser/org/apache/lucene/queryparser/classic/package-summary.html#Overview),
  any Lucene query is a valid Orchestrate.io search query.
 
-The simplest search query is a `*` query. This is what a query against 
+The simplest search query is a `*` query. This is what a query against
 the `users` collection would look like:
 
 ```java
@@ -586,7 +686,7 @@ for (Result<User> result : results) {
     String key = userKv.getKey();
     String ref = userKev.getRef();
     User user = userKv.getValue();
-    
+
     System.out.println(String.format(
       "Found user email:%s, name:%s, ref:%s",
           key, user.getName(), ref
@@ -611,7 +711,7 @@ SearchResults<User> results =
 The collection called `users` will be searched with the query `description:java`
  (which finds users whose description contains 'java') and return
  up to `50` results, starting at offset `10` (limit and offset are a
- common pagination mechanism). The result values will be deserialized 
+ common pagination mechanism). The result values will be deserialized
  to `User` instances.
 
 In some cases, it may be helpful to only retrieve the matching keys (and refs).
@@ -633,8 +733,8 @@ for (Result<User> result : results) {
     KvObject<User> userKv = result.getKvObject();
     String email = userKv.getKey();
     // userKv.getValue() will be null because the search request
-    // has "withValues(false)". 
-    
+    // has "withValues(false)".
+
     System.out.println(email + ": "+result.getScore());
 }
 ```
@@ -683,7 +783,7 @@ SearchResults<DomainObject> results =
 ```
 
 The backslashes in the first two examples are necessary to escape
- the quotes in the Java string literal, so that the query is sent 
+ the quotes in the Java string literal, so that the query is sent
  as a `phrase query`. If the query didn't have the inner quotes
  (for example: "title: foo bar", would be a logical OR, where
  title could have `foo` OR `bar`).  
@@ -696,7 +796,7 @@ matched by the query. There are five different kinds of aggregate functions:
 TopValues, Statistical, Range, Distance, and TimeSeries.
 
 Here are a few examples to show how to use aggregate functions in common
-scenarios. Again, `DomainObject` is just a POJO, just like our previous `User` 
+scenarios. Again, `DomainObject` is just a POJO, just like our previous `User`
 examples.
 
 ```java
@@ -806,10 +906,10 @@ In the Orchestrate.io service, an event is a time ordered piece of data you want
 Some examples of types of objects you'd want to store as events are; comments
  that belong to a blog article, items in a user's news feed from a social
  network, or billing history from a customer.
- 
-For the Event examples, we will assume we have a "users" `collection` and that 
+
+For the Event examples, we will assume we have a "users" `collection` and that
 each user `key` has an event called `logs`. We will show the results being mapped to a
-`LogItem` class. You would replace that class with one of your own, and it 
+`LogItem` class. You would replace that class with one of your own, and it
 just needs to be a normal POJO class (java bean conventions). For
 our examples, we'll assume that `LogItem` looks like this:
 
@@ -903,12 +1003,12 @@ System.out.println(logItem.getDescription());
 
 #### <a name="search-events"></a> [Search Events](#search-events)
 
-Events can be searched using the same Search api. To find events, the query must 
+Events can be searched using the same Search api. To find events, the query must
 include the predicate for finding events: `@path.kind:event`. This `path metadata` predicate
-indicates we are only searching for `event` objects. This meta defaults to `item` so that 
-ONLY items are returned unless `@path.kind` is specified explicitly. 
+indicates we are only searching for `event` objects. This meta defaults to `item` so that
+ONLY items are returned unless `@path.kind` is specified explicitly.
 
-By specifying the `@path.kind:event` you are able to search for events across keys 
+By specifying the `@path.kind:event` you are able to search for events across keys
 in a collection.
 
 ```java
@@ -924,7 +1024,7 @@ for(Result<LogItem> result: results) {
     String key = logEvent.getKey();
     Long timestamp = logEvent.getTimestamp();
     LogItem logItem = logEvent.getValue();
-    
+
     System.out.println(String.format(
       "Found event key:%s, timestamp:%s, description:%s",
           key, timestamp, logItem.getDescription()
@@ -961,7 +1061,7 @@ for(Result<LogItem> result: results) {
     String key = logEvent.getKey();
     Long timestamp = logEvent.getTimestamp();
     LogItem logItem = logEvent.getValue();
-    
+
     System.out.println(String.format(
       "Found event key:%s, timestamp:%s, description:%s",
           key, timestamp, logItem.getDescription()
@@ -969,7 +1069,7 @@ for(Result<LogItem> result: results) {
 }
 ```
 
-Searching across event types works too, but will require a bit more handling since 
+Searching across event types works too, but will require a bit more handling since
 the different event types will likely map to different Java Objects.
 
 ```java
@@ -985,11 +1085,11 @@ for(Result<Void> result: results) {
     String eventType = eventResult.getType();
     String key = eventResult.getKey();
     Long timestamp = eventResult.getTimestamp();
-    
+
     if("activities".equals(eventType)) {
       // assuming our app maps 'activity' events to a POJO class called LogItem
       LogItem logItem = eventResult.getValue(LogItem.class);
-    
+
       System.out.println(String.format(
         "Found ACTIVITY: key:%s, timestamp:%s, description:%s",
             key, timestamp, logItem.getDescription()
@@ -997,7 +1097,7 @@ for(Result<Void> result: results) {
     } else if("payments".equals(eventType)) {
       // assuming our app maps 'payment' events to a POJO class called UserPayment
       UserPayment payment = eventResult.getValue(UserPayment.class);
-    
+
       System.out.println(String.format(
         "Found PAYMENT: key:%s, timestamp:%s, description:%s",
             key, timestamp, payment.getDescription()
@@ -1024,11 +1124,11 @@ for(Result<Void> result: results) {
        Event<Void> eventResult = result.getEventObject();
        String eventType = eventResult.getType();
 	    Long timestamp = eventResult.getTimestamp();
-    
+
        if("activities".equals(eventType)) {
          // assuming our app maps 'activity' events to a POJO class called LogItem
          LogItem logItem = eventResult.getValue(LogItem.class);
-    
+
          System.out.println(String.format(
            "Found ACTIVITY: key:%s, timestamp:%s, description:%s",
                key, timestamp, logItem.getDescription()
@@ -1036,7 +1136,7 @@ for(Result<Void> result: results) {
        } else if("payments".equals(eventType)) {
          // assuming our app maps 'payment' events to a POJO class called UserPayment
          UserPayment payment = eventResult.getValue(UserPayment.class);
-    
+
          System.out.println(String.format(
            "Found PAYMENT: key:%s, timestamp:%s, description:%s",
                key, timestamp, payment.getDescription()
@@ -1410,7 +1510,7 @@ Any Resource method that returns an OrchestrateRequest will initiate an asynchro
  http request to the Orchestrate service. For example:
 
 ```java
-OrchestrateRequest<String> request = 
+OrchestrateRequest<String> request =
 		client.kv("someCollection", "someKey")
 			.get(String.class)
 ```
