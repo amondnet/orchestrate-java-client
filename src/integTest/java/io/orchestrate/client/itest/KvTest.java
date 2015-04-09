@@ -173,6 +173,7 @@ public final class KvTest extends BaseClientTest {
 
     @Theory
     public void pojoKvPutAsync(@ForAll(sampleSize = 10) final String key) throws InterruptedException {
+        assumeThat(key, not(isEmptyString()));
         final BlockingQueue<KvMetadata> queue = DataStructures.getLTQInstance(KvMetadata.class);
 
         User user = new User("test1", "Some description");
@@ -198,6 +199,7 @@ public final class KvTest extends BaseClientTest {
 
     @Theory
     public void pojoKvGet(@ForAll(sampleSize = 10) final String key) throws InterruptedException {
+        assumeThat(key, not(isEmptyString()));
         User user = new User(key, "description for "+key);
 
         final KvMetadata userKvMeta =
@@ -214,6 +216,7 @@ public final class KvTest extends BaseClientTest {
 
     @Theory
     public void pojoKvGetAsync(@ForAll(sampleSize = 10) final String key) throws InterruptedException {
+        assumeThat(key, not(isEmptyString()));
         User user = new User(key, "description for "+key);
 
         final KvMetadata userKvMeta =

@@ -32,7 +32,9 @@ public abstract class AggregateResult {
         for (JsonNode aggregateNode : aggregateNodes) {
             String aggregateKind = aggregateNode.get("aggregate_kind").asText();
             AggregateResult aggregate = null;
-            if (aggregateKind.equals("stats")) {
+            if (aggregateKind.equals("top_values")) {
+                aggregate = TopValuesAggregateResult.from(aggregateNode);
+            } else if (aggregateKind.equals("stats")) {
                 aggregate = StatsAggregateResult.from(aggregateNode);
             } else if (aggregateKind.equals("range")) {
                 aggregate = RangeAggregateResult.from(aggregateNode);

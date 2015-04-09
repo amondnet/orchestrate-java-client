@@ -30,6 +30,8 @@ import io.orchestrate.client.StatsAggregateResult;
 import io.orchestrate.client.TimeInterval;
 import io.orchestrate.client.TimeSeriesAggregateResult;
 import io.orchestrate.client.TimeSeriesBucket;
+import io.orchestrate.client.TopValuesAggregateResult;
+import io.orchestrate.client.CountedValue;
 
 import java.util.Iterator;
 import java.util.List;
@@ -40,6 +42,106 @@ import org.junit.Test;
  * {@link io.orchestrate.client.OrchestrateClient#searchCollection(String)}.
  */
 public final class AggregateTest extends BaseClientTest {
+
+    @Test
+    public void testTopValuesAggregate() throws InterruptedException {
+        KvMetadata kvMetadata;
+        kvMetadata = client.kv(collection(), "key0").put("{`a`:1.0}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key1").put("{`a`:1.0}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key2").put("{`a`:1.0}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key3").put("{`a`:`monkey`}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key4").put("{`a`:`monkey`}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key5").put("{`a`:`monkey`}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key6").put("{`a`:`monkey`}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key7").put("{`a`:true}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key8").put("{`a`:null}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key9").put("{`a`:null}".replace('`', '"')).get();
+
+        // give time for the writes to hit the search index
+        Thread.sleep(1000);
+
+        final SearchResults<String> results =
+                client.searchCollection(kvMetadata.getCollection())
+                      .offset(0).limit(0)
+                      .aggregate(Aggregate.builder().topValues("value.a").build())
+                      .get(String.class, "*")
+                      .get();
+
+        assertNotNull(results);
+        assertNotNull(results.getAggregates());
+        assertNotNull(results.getAggregates().iterator());
+        assertTrue(results.getAggregates().iterator().hasNext());
+
+        Iterator<AggregateResult> i = results.getAggregates().iterator();
+        AggregateResult aggregate = i.next();
+
+        assertNotNull(aggregate);
+        assertTrue(aggregate instanceof TopValuesAggregateResult);
+        TopValuesAggregateResult topValues = (TopValuesAggregateResult) aggregate;
+        List<CountedValue> entries = topValues.getEntries();
+
+        // Check the total number of entries for the "value.a" field
+        assertEquals(10L, topValues.getValueCount());
+        // Check the number of entries in this paged result set
+        assertEquals(4, entries.size());
+        // Check the values themselves
+        assertEquals("monkey", (String) entries.get(0).getValue());
+        assertEquals(4L, entries.get(0).getCount());
+        assertEquals((Double) 1.0, (Double) entries.get(1).getValue());
+        assertEquals(3L, entries.get(1).getCount());
+        assertEquals(null, entries.get(2).getValue());
+        assertEquals(2L, entries.get(2).getCount());
+        assertEquals((Boolean) false, (Boolean) entries.get(3).getValue());
+        assertEquals(1L, entries.get(3).getCount());
+    }
+
+    @Test
+    public void testTopValuesAggregateWithOffsetAndLimit() throws InterruptedException {
+        KvMetadata kvMetadata;
+        kvMetadata = client.kv(collection(), "key0").put("{`a`:1.0}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key1").put("{`a`:1.0}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key2").put("{`a`:1.0}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key3").put("{`a`:`monkey`}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key4").put("{`a`:`monkey`}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key5").put("{`a`:`monkey`}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key6").put("{`a`:`monkey`}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key7").put("{`a`:true}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key8").put("{`a`:null}".replace('`', '"')).get();
+        kvMetadata = client.kv(collection(), "key9").put("{`a`:null}".replace('`', '"')).get();
+
+        // give time for the writes to hit the search index
+        Thread.sleep(1000);
+
+        final SearchResults<String> results =
+                client.searchCollection(kvMetadata.getCollection())
+                      .offset(0).limit(0)
+                      .aggregate(Aggregate.builder().topValues("value.a", 1, 2).build())
+                      .get(String.class, "*")
+                      .get();
+
+        assertNotNull(results);
+        assertNotNull(results.getAggregates());
+        assertNotNull(results.getAggregates().iterator());
+        assertTrue(results.getAggregates().iterator().hasNext());
+
+        Iterator<AggregateResult> i = results.getAggregates().iterator();
+        AggregateResult aggregate = i.next();
+
+        assertNotNull(aggregate);
+        assertTrue(aggregate instanceof TopValuesAggregateResult);
+        TopValuesAggregateResult topValues = (TopValuesAggregateResult) aggregate;
+        List<CountedValue> entries = topValues.getEntries();
+
+        // Check the total number of entries for the "value.a" field
+        assertEquals(10L, topValues.getValueCount());
+        // Check the number of entries in this paged result set
+        assertEquals(2, entries.size());
+        // Check the values themselves
+        assertEquals((Double) 1.0, (Double) entries.get(0).getValue());
+        assertEquals(3L, entries.get(0).getCount());
+        assertEquals(null, entries.get(1).getValue());
+        assertEquals(2L, entries.get(1).getCount());
+    }
 
     @Test
     public void testStatsAggregate() throws InterruptedException {

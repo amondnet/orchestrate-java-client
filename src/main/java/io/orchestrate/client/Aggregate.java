@@ -1,6 +1,7 @@
 package io.orchestrate.client;
 
 import static io.orchestrate.client.Preconditions.checkNotNull;
+import static io.orchestrate.client.Preconditions.checkNotNegative;
 
 /**
  * This is a convenience class that helps build syntactically correct
@@ -34,6 +35,68 @@ public class Aggregate {
      */
     public String build() {
         return b.toString();
+    }
+
+    /**
+     * Adds a top-values aggregate to the query for the given field name. Uses a
+     * default offset of 0 and a default limit of 10, which retrieves the first
+     * ten of the top values. Use the method with offset and limit params to
+     * allow paging through the aggregate results.
+     *
+     * <p>
+     * {@code
+     * client.searchCollection("someCollection")
+     *     .aggregate(Aggregate.builder()
+     *         .topValues("value.tags")
+     *         .build()
+     *     )
+     *     .get(String.class, "*")
+     *     .get()
+     * }
+     * </p>
+     *
+     * @param fieldName The fully-qualified name of the field to aggregate upon
+     * @return This request.
+     */
+    public Aggregate topValues(final String fieldName) {
+        checkNotNull(fieldName, "fieldName");
+        if (b.length() > 0) {
+            b.append(',');
+        }
+        b.append(String.format("%s:top_values", fieldName));
+        return this;
+    }
+
+    /**
+     * Adds a top-values aggregate to the query for the given field name, with offset
+     * and limit parameters to allow paging through the aggregate results.
+     *
+     * <p>
+     * {@code
+     * client.searchCollection("someCollection")
+     *     .aggregate(Aggregate.builder()
+     *         .topValues("value.tags", 20, 10)
+     *         .build()
+     *     )
+     *     .get(String.class, "*")
+     *     .get()
+     * }
+     * </p>
+     *
+     * @param fieldName The fully-qualified name of the field to aggregate upon
+     * @param offset The offset of the first top-values result entry to include
+     * @param limit The maximum number of top-values result entries to retrieve
+     * @return This request.
+     */
+    public Aggregate topValues(final String fieldName, int offset, int limit) {
+        checkNotNull(fieldName, "fieldName");
+        checkNotNegative(offset, "offset");
+        checkNotNegative(limit, "limit");
+        if (b.length() > 0) {
+            b.append(',');
+        }
+        b.append(String.format("%s:top_values:offset:%s:limit:%s", fieldName, offset, limit));
+        return this;
     }
 
     /**
