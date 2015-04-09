@@ -17,10 +17,13 @@ package io.orchestrate.client.itest;
 
 import io.orchestrate.client.*;
 import org.glassfish.grizzly.utils.DataStructures;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
@@ -33,13 +36,9 @@ import static org.junit.Assert.assertEquals;
  * {@link io.orchestrate.client.OrchestrateClient#searchCollection(String)}.
  */
 public final class SearchTest extends BaseClientTest {
-
     @Test
-    public void getSearchCollectionEmpty() {
-        final SearchResults<String> results =
-                client.searchCollection(collection())
-                      .get(String.class, "*")
-                      .get();
+    public void getSearchCollectionEmpty() throws InterruptedException {
+        final SearchResults<String> results = search("*", 0);
 
         assertNotNull(results);
         assertFalse(results.iterator().hasNext());
@@ -47,18 +46,9 @@ public final class SearchTest extends BaseClientTest {
 
     @Test
     public void getSearchCollection() throws InterruptedException {
-        final KvMetadata kvMetadata = client.kv(collection(), "key").put("{}").get();
-        // give time for the write to hit the search index
-        Thread.sleep(1000);
+        final KvMetadata kvMetadata = insertItem("key", "{}");
 
-        final SearchResults<String> results =
-                client.searchCollection(kvMetadata.getCollection())
-                      .get(String.class, "*")
-                      .get();
-
-        assertNotNull(kvMetadata);
-        assertNotNull(results);
-        assertTrue(results.iterator().hasNext());
+        final SearchResults<String> results = search("*", 1);
 
         final Result<String> result = results.iterator().next();
         assertNotNull(result);
@@ -73,12 +63,10 @@ public final class SearchTest extends BaseClientTest {
 
     @Test
     public void getSearchCollectionAsync() throws InterruptedException {
-        final KvMetadata kvMetadata = client.kv(collection(), "key").put("{}").get();
-        // give time for the write to hit the search index
-        Thread.sleep(1000);
+        final KvMetadata kvMetadata = insertItem("key", "{}");
 
         final BlockingQueue<SearchResults> queue = DataStructures.getLTQInstance(SearchResults.class);
-        client.searchCollection(kvMetadata.getCollection())
+        search()
               .get(String.class, "*")
               .on(new ResponseAdapter<SearchResults<String>>() {
                   @Override
@@ -95,8 +83,6 @@ public final class SearchTest extends BaseClientTest {
         @SuppressWarnings("unchecked")
         final SearchResults<String> results = queue.poll(5000, TimeUnit.MILLISECONDS);
 
-        assertNotNull(kvMetadata);
-        assertNotNull(results);
         assertTrue(results.iterator().hasNext());
 
         final Result<String> result = results.iterator().next();
@@ -112,29 +98,22 @@ public final class SearchTest extends BaseClientTest {
 
     @Test
     public void getSearchCollectionAndPaginate() throws InterruptedException {
-        final String collection = collection();
-        final KvMetadata kvMetadata1 = client.kv(collection, "key1").put("{}").get();
-        final KvMetadata kvMetadata2 = client.kv(collection, "key2").put("{}").get();
-        // give time for the write to hit the search index
-        Thread.sleep(3000);
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
-        final SearchResults<String> results1 =
-                client.searchCollection(kvMetadata1.getCollection())
+        final SearchResults<String> results1 = search()
                       .limit(10)
                       .offset(0)
                       .sort("key")
                       .get(String.class, "*")
                       .get();
 
-        final SearchResults<String> results2 =
-                client.searchCollection(kvMetadata1.getCollection())
+        final SearchResults<String> results2 = search()
                       .offset(1)
                       .sort("key")
                       .get(String.class, "*")
                       .get();
 
-        assertNotNull(kvMetadata1);
-        assertNotNull(kvMetadata2);
         assertNotNull(results1);
         assertNotNull(results2);
         assertTrue(results1.iterator().hasNext());
@@ -163,19 +142,13 @@ public final class SearchTest extends BaseClientTest {
 
     @Test
     public void getSearchResultsWithoutValues() throws InterruptedException {
-        final String collection = collection();
+        final KvMetadata kvMetadata = insertItem("key1", "{}");
 
-        final KvMetadata kvMetadata = client.kv(collection, "key1").put("{}").get();
-        // give time for the write to hit the search index
-        Thread.sleep(3000);
-
-        final SearchResults<String> results =
-                client.searchCollection(kvMetadata.getCollection())
+        final SearchResults<String> results = search()
                         .withValues(false)
                         .get(String.class, "*")
                         .get();
 
-        assertNotNull(kvMetadata);
         assertNotNull(results);
         assertTrue(results.iterator().hasNext());
 
@@ -192,25 +165,14 @@ public final class SearchTest extends BaseClientTest {
 
     @Test
     public void getSearchResultsSorted() throws InterruptedException {
-        final String collection = collection();
+        insertItem("key1", "{`name`: {`first`: `Jacob`, `last`: `Grimm`}}");
+        insertItem("key2", "{`name`: {`first`: `Wilhelm`, `last`: `Grimm`}}");
 
-        final KvMetadata kvMetadata1 = client.kv(collection, "key1")
-                .put("{'name': {'first': 'Jacob', 'last': 'Grimm'}}".replace('\'', '"'))
-                .get();
-        final KvMetadata kvMetadata2 = client.kv(collection, "key2")
-                .put("{'name': {'first': 'Wilhelm', 'last': 'Grimm'}}".replace('\'', '"'))
-                .get();
-        // give time for the write to hit the search index
-        Thread.sleep(3000);
-
-        final SearchResults<String> results =
-                client.searchCollection(kvMetadata1.getCollection())
+        final SearchResults<String> results = search()
                         .sort("value.name.last:asc,value.name.first:asc")
                         .get(String.class, "value.name.last: Grimm")
                         .get();
 
-        assertNotNull(kvMetadata1);
-        assertNotNull(kvMetadata2);
         assertNotNull(results);
         assertTrue(results.iterator().hasNext());
 
@@ -224,16 +186,8 @@ public final class SearchTest extends BaseClientTest {
 
     @Test
     public void getSearchResultsFromGeoQuery() throws InterruptedException {
-        final String collection = collection();
-
-        final KvMetadata kvMetadata = client.kv(collection, "key1")
-                .put("{'location': {'lat': 1, 'lon': 1}}".replace('\'', '"'))
-                .get();
-        // give time for the write to hit the search index
-        Thread.sleep(3000);
-
-        final SearchResults<String> results =
-                client.searchCollection(kvMetadata.getCollection())
+        final KvMetadata kvMetadata = insertItem("key1", "{`location`: {`lat`: 1, `lon`: 1}}");
+        final SearchResults<String> results = search()
                         .sort("value.location:distance:asc")
                         .get(String.class, "value.location:NEAR:{lat:1 lon:1 dist:1km}")
                         .get();
@@ -260,12 +214,7 @@ public final class SearchTest extends BaseClientTest {
                         .create("{}")
                         .get();
         }
-
-        // give time for the write to hit the search index
-        Thread.sleep(3000);
-
-        final SearchResults<Void> results =
-                client.searchCollection(collection)
+        final SearchResults<Void> results = search()
                         .get("@path.kind:event")
                         .get();
 
@@ -287,11 +236,7 @@ public final class SearchTest extends BaseClientTest {
                     .get();
         }
 
-        // give time for the write to hit the search index
-        Thread.sleep(3000);
-
-        final SearchResults<Void> results =
-                client.searchCollection(collection)
+        final SearchResults<Void> results = search()
                         .kinds("event")
                         .get("*")
                         .get();
@@ -314,11 +259,7 @@ public final class SearchTest extends BaseClientTest {
                     .get();
         }
 
-        // give time for the write to hit the search index
-        Thread.sleep(3000);
-
-        final SearchResults<Void> results =
-                client.searchCollection(collection)
+        final SearchResults<Void> results = search()
                         .get("@path.kind:event AND @path.type:type_1")
                         .get();
 
@@ -326,8 +267,6 @@ public final class SearchTest extends BaseClientTest {
         Result<Void> result = firstResult(results);
         assertEquals("type_1", ((Event)result.getKvObject()).getType());
     }
-
-    private static final Random RAND = new Random();
 
     @Test
     public void searchEventsAndItems() throws InterruptedException {
@@ -338,7 +277,7 @@ public final class SearchTest extends BaseClientTest {
             String value = "{\"val\":\"val_"+i+"\"}";
 
             // write item with the test value.
-            client.kv(collection, key).put(value).get();
+            insertItem(key, value);
 
             // write events to another key, with the same value.
             key = Long.toHexString(RAND.nextLong());
@@ -348,11 +287,7 @@ public final class SearchTest extends BaseClientTest {
                     .get();
         }
 
-        // give time for the write to hit the search index
-        Thread.sleep(3000);
-
-        final SearchResults<Void> results =
-                client.searchCollection(collection)
+        final SearchResults<Void> results = search()
                         .sort("@path.kind")  // this is so the event will come first.
                         .get("@path.kind:(item event) AND val:`val_1`")
                         .get();
@@ -372,7 +307,7 @@ public final class SearchTest extends BaseClientTest {
             String value = "{\"val\":\"val_"+i+"\"}";
 
             // write item with the test value.
-            client.kv(collection, key).put(value).get();
+            insertItem(key, value);
 
             // write events to another key, with the same value.
             key = Long.toHexString(RAND.nextLong());
@@ -381,12 +316,7 @@ public final class SearchTest extends BaseClientTest {
                     .create(value)
                     .get();
         }
-
-        // give time for the write to hit the search index
-        Thread.sleep(3000);
-
-        final SearchResults<Void> results =
-                client.searchCollection(collection)
+        final SearchResults<Void> results = search()
                         .sort("@path.kind")  // this is so the event will come first.
                         .kinds("item", "event")
                         .get("val:`val_1`")
@@ -417,11 +347,7 @@ public final class SearchTest extends BaseClientTest {
                     .get();
         }
 
-        // give time for the write to hit the search index
-        Thread.sleep(3000);
-
-        final SearchResults<Void> results =
-                client.searchCollection(collection)
+        final SearchResults<Void> results = search()
                         .sort("@path.kind")  // this is so the event will come first.
                         .get("@path.kind:(item event) AND description:test_1")
                         .get();
@@ -439,8 +365,9 @@ public final class SearchTest extends BaseClientTest {
     }
 
     private <T> Result<T> firstResult(SearchResults<T> results) {
-        for(Result<T> r : results.getResults()) {
-            return r;
+        Iterator<Result<T>> iter = results.getResults().iterator();
+        if (iter.hasNext()) {
+            return iter.next();
         }
         return null;
     }
@@ -452,4 +379,24 @@ public final class SearchTest extends BaseClientTest {
         }
         return l;
     }
+
+    private SearchResults<String> search(String query, int expectedCount) throws InterruptedException {
+        SearchResults<String> results = search()
+                .get(String.class, query)
+                .get();
+        assertNotNull(results);
+        assertEquals(expectedCount, results.getTotalCount());
+        if (expectedCount > 0) {
+            assertTrue(results.iterator().hasNext());
+        }
+
+        return results;
+    }
+
+    private CollectionSearchResource search() throws InterruptedException {
+        // give time for the write to hit the search index
+        Thread.sleep(1000);
+        return client.searchCollection(collection());
+    }
+
 }

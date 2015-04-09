@@ -42,10 +42,7 @@ public final class KvListTest extends BaseClientTest {
     public void getList(@ForAll(sampleSize=10) final String key) {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata kvMetadata =
-                client.kv(collection(), "key")
-                      .put("{}")
-                      .get();
+        final KvMetadata kvMetadata = insertItem("key", "{}");
 
         final KvList<String> kvList =
                 client.listCollection(kvMetadata.getCollection())
@@ -70,10 +67,7 @@ public final class KvListTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata kvMetadata =
-                client.kv(collection(), "key")
-                      .put("{}")
-                      .get();
+        final KvMetadata kvMetadata = insertItem("key", "{}");
 
         final BlockingQueue<KvList> queue = DataStructures.getLTQInstance(KvList.class);
         client.listCollection(kvMetadata.getCollection())
@@ -108,18 +102,11 @@ public final class KvListTest extends BaseClientTest {
 
     @Test
     public void getListAndPaginate() {
-        final String collection = collection();
-        final KvMetadata kvMetadata1 =
-                client.kv(collection, "key1")
-                      .put("{}")
-                      .get();
-        final KvMetadata kvMetadata2 =
-                client.kv(collection, "key2")
-                      .put("{}")
-                      .get();
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final KvList<String> kvList1 =
-                client.listCollection(kvMetadata1.getCollection())
+                client.listCollection(collection())
                       .limit(1)
                       .get(String.class)
                       .get();
@@ -145,10 +132,7 @@ public final class KvListTest extends BaseClientTest {
     @Test
     public void getListWithoutValues() {
         final String collection = collection();
-        final KvMetadata kvMetadata =
-                client.kv(collection, "key1")
-                        .put("{}")
-                        .get();
+        final KvMetadata kvMetadata = insertItem("key1", "{}");
 
         final KvList<String> kvList =
                 client.listCollection(collection)

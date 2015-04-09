@@ -41,6 +41,8 @@ public class KvResource extends BaseResource {
     private boolean ifAbsent;
     /** The last known version of the stored object. */
     private String objectRef;
+    /** Whether an update can act as an insert if the kv doesn't exist */
+    private boolean upsert;
 
     KvResource(final OrchestrateClient client,
                final JacksonMapper mapper,
@@ -189,6 +191,15 @@ public class KvResource extends BaseResource {
         return this;
     }
 
+    public KvResource upsert() {
+        return upsert(Boolean.TRUE);
+    }
+
+    public KvResource upsert(final boolean upsert) {
+        this.upsert = upsert;
+        return this;
+    }
+
     /**
      * The last known version of the stored object to match for the request to
      * succeed.
@@ -265,6 +276,7 @@ public class KvResource extends BaseResource {
         final HttpRequestPacket.Builder httpHeaderBuilder = HttpRequestPacket.builder()
                 .method(Method.PATCH)
                 .contentType("application/json-patch+json")
+                .query("upsert=" + Boolean.toString(upsert))
                 .uri(uri);
         if (objectRef != null) {
             httpHeaderBuilder.header(Header.IfMatch, "\"".concat(objectRef).concat("\""));
@@ -302,6 +314,7 @@ public class KvResource extends BaseResource {
         final HttpRequestPacket.Builder httpHeaderBuilder = HttpRequestPacket.builder()
                 .method(Method.PATCH)
                 .contentType("application/merge-patch+json")
+                .query("upsert=" + Boolean.toString(upsert))
                 .uri(uri);
         if (objectRef != null) {
             httpHeaderBuilder.header(Header.IfMatch, "\"".concat(objectRef).concat("\""));
