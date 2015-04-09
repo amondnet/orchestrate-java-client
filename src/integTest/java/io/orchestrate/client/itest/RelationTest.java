@@ -52,9 +52,8 @@ public final class RelationTest extends BaseClientTest {
     public void getRelation(@ForAll(sampleSize=10) final String kind) {
         assumeThat(kind, not(isEmptyString()));
 
-        final String collection = collection();
-        final KvMetadata kvMetadata1 = client.kv(collection, "key1").put("{}").get();
-        final KvMetadata kvMetadata2 = client.kv(collection, "key2").put("{}").get();
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final Boolean result =
                 client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
@@ -85,9 +84,8 @@ public final class RelationTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(kind, not(isEmptyString()));
 
-        final String collection = collection();
-        final KvMetadata kvMetadata1 = client.kv(collection, "key1").put("{}").get();
-        final KvMetadata kvMetadata2 = client.kv(collection, "key2").put("{}").get();
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final Boolean result =
                 client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
@@ -131,10 +129,9 @@ public final class RelationTest extends BaseClientTest {
     public void getRelationMultiHop(@ForAll(sampleSize=10) final String kind) {
         assumeThat(kind, not(isEmptyString()));
 
-        final String collection = collection();
-        final KvMetadata kvMetadata1 = client.kv(collection, "key1").put("{}").get();
-        final KvMetadata kvMetadata2 = client.kv(collection, "key2").put("{}").get();
-        final KvMetadata kvMetadata3 = client.kv(collection, "key3").put("{}").get();
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
+        final KvMetadata kvMetadata3 = insertItem("key3", "{}");
 
         final Boolean result1 =
                 client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
@@ -174,10 +171,9 @@ public final class RelationTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(kind, not(isEmptyString()));
 
-        final String collection = collection();
-        final KvMetadata kvMetadata1 = client.kv(collection, "key1").put("{}").get();
-        final KvMetadata kvMetadata2 = client.kv(collection, "key2").put("{}").get();
-        final KvMetadata kvMetadata3 = client.kv(collection, "key3").put("{}").get();
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
+        final KvMetadata kvMetadata3 = insertItem("key3", "{}");
 
         final Boolean result1 =
                 client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
@@ -229,9 +225,8 @@ public final class RelationTest extends BaseClientTest {
     public void putRelation(@ForAll(sampleSize=10) final String kind) {
         assumeThat(kind, not(isEmptyString()));
 
-        final String collection = collection();
-        final KvMetadata kvMetadata1 = client.kv(collection, "key1").put("{}").get();
-        final KvMetadata kvMetadata2 = client.kv(collection, "key2").put("{}").get();
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final Boolean result =
                 client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
@@ -249,9 +244,8 @@ public final class RelationTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(kind, not(isEmptyString()));
 
-        final String collection = collection();
-        final KvMetadata kvMetadata1 = client.kv(collection, "key1").put("{}").get();
-        final KvMetadata kvMetadata2 = client.kv(collection, "key2").put("{}").get();
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final BlockingQueue<Boolean> queue = DataStructures.getLTQInstance(Boolean.class);
         client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
@@ -280,9 +274,8 @@ public final class RelationTest extends BaseClientTest {
     public void purgeRelation(@ForAll(sampleSize=10) final String kind) {
         assumeThat(kind, not(isEmptyString()));
 
-        final String collection = collection();
-        final KvMetadata kvMetadata1 = client.kv(collection, "key1").put("{}").get();
-        final KvMetadata kvMetadata2 = client.kv(collection, "key2").put("{}").get();
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final Boolean store =
                 client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
@@ -313,9 +306,8 @@ public final class RelationTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(kind, not(isEmptyString()));
 
-        final String collection = collection();
-        final KvMetadata kvMetadata1 = client.kv(collection, "key1").put("{}").get();
-        final KvMetadata kvMetadata2 = client.kv(collection, "key2").put("{}").get();
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final Boolean store =
                 client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
@@ -359,9 +351,9 @@ public final class RelationTest extends BaseClientTest {
         final String collection = collection();
         final String kind = "paginate";
 
-        final KvMetadata kvMetadata1 = client.kv(collection, "key1").put("{}").get();
-        final KvMetadata kvMetadata2 = client.kv(collection, "key2").put("{}").get();
-        final KvMetadata kvMetadata3 = client.kv(collection, "key3").put("{}").get();
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
+        final KvMetadata kvMetadata3 = insertItem("key3", "{}");
 
         final Boolean store1 =
                 client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())

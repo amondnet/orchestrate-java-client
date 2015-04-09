@@ -88,7 +88,7 @@ public final class KvTest extends BaseClientTest {
     public void deleteKeyIfMatch(@ForAll(sampleSize=10) final String key) {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata obj = client.kv(collection(), "key").put("{}").get();
+        final KvMetadata obj = insertItem("key", "{}");
 
         final Boolean result =
                 client.kv(obj.getCollection(), obj.getKey())
@@ -105,7 +105,7 @@ public final class KvTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata obj = client.kv(collection(), "key").put("{}").get();
+        final KvMetadata obj = insertItem("key", "{}");
 
         final BlockingQueue<Boolean> queue = DataStructures.getLTQInstance(Boolean.class);
         client.kv(obj.getCollection(), obj.getKey())
@@ -132,10 +132,7 @@ public final class KvTest extends BaseClientTest {
     public void getKey(@ForAll(sampleSize=10) final String key) {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata kvMetadata =
-                client.kv(collection(), key)
-                      .put("{}")
-                      .get();
+        final KvMetadata kvMetadata = insertItem(key, "{}");
 
         final KvObject<String> object =
                 client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
@@ -289,10 +286,7 @@ public final class KvTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata kvMetadata =
-                client.kv(collection(), key)
-                      .put("{}")
-                      .get();
+        final KvMetadata kvMetadata = insertItem(key, "{}");
 
         final BlockingQueue<KvObject> queue = DataStructures.getLTQInstance(KvObject.class);
         client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
@@ -334,10 +328,7 @@ public final class KvTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata kvMetadata =
-                client.kv(collection(), key)
-                      .put("{}")
-                      .get();
+        insertItem(key, "{}");
 
         final BlockingQueue<KvObject> queue = DataStructures.getLTQInstance(KvObject.class);
         final KvObject<String> object =
@@ -405,7 +396,7 @@ public final class KvTest extends BaseClientTest {
     public void purgeKey(@ForAll(sampleSize=10) final String key) {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata obj = client.kv(collection(), key).put("{}").get();
+        final KvMetadata obj = insertItem(key, "{}");
 
         final Boolean result =
                 client.kv(obj.getCollection(), obj.getKey())
@@ -427,7 +418,7 @@ public final class KvTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata obj = client.kv(collection(), key).put("{}").get();
+        final KvMetadata obj = insertItem(key, "{}");
 
         final BlockingQueue<Boolean> queue = DataStructures.getLTQInstance(Boolean.class);
         client.kv(obj.getCollection(), obj.getKey())
@@ -460,7 +451,7 @@ public final class KvTest extends BaseClientTest {
     public void purgeKeyIfMatch(@ForAll(sampleSize=10) final String key) {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata obj = client.kv(collection(), key).put("{}").get();
+        final KvMetadata obj = insertItem(key, "{}");
 
         final Boolean result =
                 client.kv(obj.getCollection(), obj.getKey())
@@ -483,7 +474,7 @@ public final class KvTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata obj = client.kv(collection(), key).put("{}").get();
+        final KvMetadata obj = insertItem(key, "{}");
 
         final BlockingQueue<Boolean> queue = DataStructures.getLTQInstance(Boolean.class);
         client.kv(obj.getCollection(), obj.getKey())
@@ -517,10 +508,7 @@ public final class KvTest extends BaseClientTest {
     public void putKey(@ForAll(sampleSize=10) final String key) {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata kvMetadata =
-                client.kv(collection(), key)
-                      .put("{}")
-                      .get();
+        final KvMetadata kvMetadata = insertItem(key, "{}");
 
         final KvObject<String> kvObject =
                 client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
@@ -744,10 +732,7 @@ public final class KvTest extends BaseClientTest {
     public void patchKey(@ForAll(sampleSize=10) final String key) {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata kvMetadata =
-            client.kv(collection(), key)
-                .put("{}")
-                .get();
+        final KvMetadata kvMetadata = insertItem(key, "{}");
 
         String name = Long.toHexString(RAND.nextLong());
 
@@ -779,10 +764,7 @@ public final class KvTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata kvMetadata =
-            client.kv(collection(), key)
-                .put("{}")
-                .get();
+        final KvMetadata kvMetadata = insertItem(key, "{}");
 
         String name = Long.toHexString(RAND.nextLong());
 
@@ -826,10 +808,7 @@ public final class KvTest extends BaseClientTest {
     public void conditionalPatchKey(@ForAll(sampleSize=10) final String key) {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata kvMetadata =
-            client.kv(collection(), key)
-                .put("{}")
-                .get();
+        final KvMetadata kvMetadata = insertItem(key, "{}");
 
         String name = Long.toHexString(RAND.nextLong());
 
@@ -862,10 +841,7 @@ public final class KvTest extends BaseClientTest {
             throws InterruptedException {
         assumeThat(key, not(isEmptyString()));
 
-        final KvMetadata kvMetadata =
-            client.kv(collection(), key)
-                .put("{}")
-                .get();
+        final KvMetadata kvMetadata = insertItem(key, "{}");
 
         String name = Long.toHexString(RAND.nextLong());
 
@@ -910,9 +886,7 @@ public final class KvTest extends BaseClientTest {
     public void conditionalPatchKeyRefFailed(@ForAll(sampleSize=10) final String key) {
         assumeThat(key, not(isEmptyString()));
 
-        client.kv(collection(), key)
-                .put("{}")
-                .get();
+        insertItem(key, "{}");
 
         String name = Long.toHexString(RAND.nextLong());
 
@@ -940,11 +914,7 @@ public final class KvTest extends BaseClientTest {
 
         String name1 = Long.toHexString(RAND.nextLong());
 
-        final KvMetadata kvMetadata =
-            client.kv(collection(), key)
-                .put("{\"name1\":\""+name1+"\"}")
-                .get();
-
+        final KvMetadata kvMetadata = insertItem(key, "{`name1`:`%s`}", name1);
 
         String name2 = Long.toHexString(RAND.nextLong());
 
@@ -971,10 +941,7 @@ public final class KvTest extends BaseClientTest {
 
         String name1 = Long.toHexString(RAND.nextLong());
 
-        final KvMetadata kvMetadata =
-                client.kv(collection(), key)
-                        .put("{\"name1\":\""+name1+"\"}")
-                        .get();
+        final KvMetadata kvMetadata = insertItem(key, "{`name1`:`%s`}", name1);
 
         String name2 = Long.toHexString(RAND.nextLong());
 
@@ -1099,10 +1066,7 @@ public final class KvTest extends BaseClientTest {
 
         String name1 = Long.toHexString(RAND.nextLong());
 
-        final KvMetadata kvMetadata =
-                client.kv(collection(), key)
-                        .put("{\"name1\":\""+name1+"\"}")
-                        .get();
+        final KvMetadata kvMetadata = insertItem(key, "{`name1`:`%s`}", name1);
 
         String name2 = Long.toHexString(RAND.nextLong());
 
@@ -1129,10 +1093,7 @@ public final class KvTest extends BaseClientTest {
 
         String name1 = Long.toHexString(RAND.nextLong());
 
-        final KvMetadata kvMetadata =
-                client.kv(collection(), key)
-                        .put("{\"name1\":\""+name1+"\"}")
-                        .get();
+        final KvMetadata kvMetadata = insertItem(key, "{`name1`:`%s`}", name1);
 
         String name2 = Long.toHexString(RAND.nextLong());
 
@@ -1173,10 +1134,7 @@ public final class KvTest extends BaseClientTest {
 
         String name1 = Long.toHexString(RAND.nextLong());
 
-        final KvMetadata kvMetadata =
-                client.kv(collection(), key)
-                        .put("{\"name1\":\""+name1+"\"}")
-                        .get();
+        insertItem(key, "{`name1`:`%s`}", name1);
 
         String name2 = Long.toHexString(RAND.nextLong());
 

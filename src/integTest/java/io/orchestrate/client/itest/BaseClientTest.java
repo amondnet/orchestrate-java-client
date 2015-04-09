@@ -22,6 +22,8 @@ import io.orchestrate.client.KvObject;
 import io.orchestrate.client.OrchestrateClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.net.URI;
@@ -33,6 +35,8 @@ import java.util.Set;
  * A base test class for testing the {@code OrchestrateClient}.
  */
 public abstract class BaseClientTest {
+    @Rule
+    public TestName name = new TestName();
 
     protected static final Set<String> COLLECTIONS = new HashSet<String>();
     protected static final Random RAND = new Random();
@@ -76,18 +80,8 @@ public abstract class BaseClientTest {
     }
 
     protected String collection() {
-        for(StackTraceElement frame : Thread.currentThread().getStackTrace()) {
-            if(frame.getClassName().equals(getClass().getName()) && !frame.getMethodName().equals("collection")) {
-                final String collection = frame.getMethodName();
-                if(!COLLECTIONS.contains(collection)){
-                    synchronized (COLLECTIONS) {
-                        COLLECTIONS.add(collection);
-                    }
-                }
-                return collection;
-            }
-        }
-        throw new IllegalStateException("Cannot determine test method name.");
+        COLLECTIONS.add(name.getMethodName());
+        return name.getMethodName();
     }
 
 

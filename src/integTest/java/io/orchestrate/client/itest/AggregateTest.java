@@ -21,7 +21,6 @@ import static org.junit.Assert.assertTrue;
 import io.orchestrate.client.Aggregate;
 import io.orchestrate.client.AggregateResult;
 import io.orchestrate.client.DistanceAggregateResult;
-import io.orchestrate.client.KvMetadata;
 import io.orchestrate.client.Range;
 import io.orchestrate.client.RangeAggregateResult;
 import io.orchestrate.client.RangeBucket;
@@ -45,138 +44,67 @@ public final class AggregateTest extends BaseClientTest {
 
     @Test
     public void testTopValuesAggregate() throws InterruptedException {
-        KvMetadata kvMetadata;
-        kvMetadata = client.kv(collection(), "key0").put("{`a`:1.0}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key1").put("{`a`:1.0}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key2").put("{`a`:1.0}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key3").put("{`a`:`monkey`}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key4").put("{`a`:`monkey`}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key5").put("{`a`:`monkey`}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key6").put("{`a`:`monkey`}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key7").put("{`a`:true}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key8").put("{`a`:null}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key9").put("{`a`:null}".replace('`', '"')).get();
+        insertItem("key0", "{`a`:1.0}");
+        insertItem("key1", "{`a`:1.0}");
+        insertItem("key2", "{`a`:1.0}");
+        insertItem("key3", "{`a`:`monkey`}");
+        insertItem("key4", "{`a`:`monkey`}");
+        insertItem("key5", "{`a`:`monkey`}");
+        insertItem("key6", "{`a`:`monkey`}");
+        insertItem("key7", "{`a`:true}");
+        insertItem("key8", "{`a`:null}");
+        insertItem("key9", "{`a`:null}");
 
-        // give time for the writes to hit the search index
-        Thread.sleep(1000);
+        final AggregateResult aggregate = searchForAgg(Aggregate.builder().topValues("value.a"));
 
-        final SearchResults<String> results =
-                client.searchCollection(kvMetadata.getCollection())
-                      .offset(0).limit(0)
-                      .aggregate(Aggregate.builder().topValues("value.a").build())
-                      .get(String.class, "*")
-                      .get();
-
-        assertNotNull(results);
-        assertNotNull(results.getAggregates());
-        assertNotNull(results.getAggregates().iterator());
-        assertTrue(results.getAggregates().iterator().hasNext());
-
-        Iterator<AggregateResult> i = results.getAggregates().iterator();
-        AggregateResult aggregate = i.next();
-
-        assertNotNull(aggregate);
-        assertTrue(aggregate instanceof TopValuesAggregateResult);
-        TopValuesAggregateResult topValues = (TopValuesAggregateResult) aggregate;
+        TopValuesAggregateResult topValues = assertAggregate(aggregate, TopValuesAggregateResult.class, "top_values", "value.a", 10);
         List<CountedValue> entries = topValues.getEntries();
 
-        // Check the total number of entries for the "value.a" field
-        assertEquals(10L, topValues.getValueCount());
         // Check the number of entries in this paged result set
         assertEquals(4, entries.size());
         // Check the values themselves
-        assertEquals("monkey", (String) entries.get(0).getValue());
-        assertEquals(4L, entries.get(0).getCount());
-        assertEquals((Double) 1.0, (Double) entries.get(1).getValue());
-        assertEquals(3L, entries.get(1).getCount());
-        assertEquals(null, entries.get(2).getValue());
-        assertEquals(2L, entries.get(2).getCount());
-        assertEquals((Boolean) false, (Boolean) entries.get(3).getValue());
-        assertEquals(1L, entries.get(3).getCount());
+        assertCountedValueEquals(entries.get(0), "monkey", 4);
+        assertCountedValueEquals(entries.get(1), 1.0, 3);
+        assertCountedValueEquals(entries.get(2), null, 2);
+        assertCountedValueEquals(entries.get(3), false, 1);
     }
 
     @Test
     public void testTopValuesAggregateWithOffsetAndLimit() throws InterruptedException {
-        KvMetadata kvMetadata;
-        kvMetadata = client.kv(collection(), "key0").put("{`a`:1.0}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key1").put("{`a`:1.0}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key2").put("{`a`:1.0}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key3").put("{`a`:`monkey`}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key4").put("{`a`:`monkey`}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key5").put("{`a`:`monkey`}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key6").put("{`a`:`monkey`}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key7").put("{`a`:true}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key8").put("{`a`:null}".replace('`', '"')).get();
-        kvMetadata = client.kv(collection(), "key9").put("{`a`:null}".replace('`', '"')).get();
+        insertItem("key0", "{`a`:1.0}");
+        insertItem("key1", "{`a`:1.0}");
+        insertItem("key2", "{`a`:1.0}");
+        insertItem("key3", "{`a`:`monkey`}");
+        insertItem("key4", "{`a`:`monkey`}");
+        insertItem("key5", "{`a`:`monkey`}");
+        insertItem("key6", "{`a`:`monkey`}");
+        insertItem("key7", "{`a`:true}");
+        insertItem("key8", "{`a`:null}");
+        insertItem("key9", "{`a`:null}");
 
-        // give time for the writes to hit the search index
-        Thread.sleep(1000);
+        AggregateResult aggregate = searchForAgg(Aggregate.builder().topValues("value.a", 1, 2));
 
-        final SearchResults<String> results =
-                client.searchCollection(kvMetadata.getCollection())
-                      .offset(0).limit(0)
-                      .aggregate(Aggregate.builder().topValues("value.a", 1, 2).build())
-                      .get(String.class, "*")
-                      .get();
-
-        assertNotNull(results);
-        assertNotNull(results.getAggregates());
-        assertNotNull(results.getAggregates().iterator());
-        assertTrue(results.getAggregates().iterator().hasNext());
-
-        Iterator<AggregateResult> i = results.getAggregates().iterator();
-        AggregateResult aggregate = i.next();
-
-        assertNotNull(aggregate);
-        assertTrue(aggregate instanceof TopValuesAggregateResult);
-        TopValuesAggregateResult topValues = (TopValuesAggregateResult) aggregate;
+        TopValuesAggregateResult topValues = assertAggregate(aggregate, TopValuesAggregateResult.class, "top_values", "value.a", 10);
         List<CountedValue> entries = topValues.getEntries();
 
-        // Check the total number of entries for the "value.a" field
-        assertEquals(10L, topValues.getValueCount());
         // Check the number of entries in this paged result set
         assertEquals(2, entries.size());
         // Check the values themselves
-        assertEquals((Double) 1.0, (Double) entries.get(0).getValue());
-        assertEquals(3L, entries.get(0).getCount());
-        assertEquals(null, entries.get(1).getValue());
-        assertEquals(2L, entries.get(1).getCount());
+        assertCountedValueEquals(entries.get(0), 1.0, 3);
+        assertCountedValueEquals(entries.get(1), null, 2);
     }
 
     @Test
     public void testStatsAggregate() throws InterruptedException {
-        KvMetadata kvMetadata;
-        kvMetadata = client.kv(collection(), "key1").put("{\"a\":1.0}").get();
-        kvMetadata = client.kv(collection(), "key2").put("{\"a\":2.0}").get();
-        kvMetadata = client.kv(collection(), "key3").put("{\"a\":3.0}").get();
-        kvMetadata = client.kv(collection(), "key4").put("{\"a\":4.0}").get();
-        kvMetadata = client.kv(collection(), "key5").put("{\"a\":5.0}").get();
+        insertItem("key1", "{`a`:1.0}");
+        insertItem("key2", "{`a`:2.0}");
+        insertItem("key3", "{`a`:3.0}");
+        insertItem("key4", "{`a`:4.0}");
+        insertItem("key5", "{`a`:5.0}");
 
-        // give time for the writes to hit the search index
-        Thread.sleep(1000);
+        AggregateResult aggregate = searchForAgg(Aggregate.builder().stats("value.a"));
 
-        final SearchResults<String> results =
-                client.searchCollection(kvMetadata.getCollection())
-                      .offset(0).limit(0)
-                      .aggregate(Aggregate.builder().stats("value.a").build())
-                      .get(String.class, "*")
-                      .get();
-
-        assertNotNull(results);
-        assertNotNull(results.getAggregates());
-        assertNotNull(results.getAggregates().iterator());
-        assertTrue(results.getAggregates().iterator().hasNext());
-
-        Iterator<AggregateResult> i = results.getAggregates().iterator();
-        AggregateResult aggregate = i.next();
-
-        assertNotNull(aggregate);
-        assertTrue(aggregate instanceof StatsAggregateResult);
-        StatsAggregateResult stats = (StatsAggregateResult) aggregate;
-
-        assertEquals(stats.getAggregateKind(), "stats");
-        assertEquals(stats.getFieldName(), "value.a");
-        assertEquals(stats.getValueCount(), 5L);
+        StatsAggregateResult stats = assertAggregate(aggregate, StatsAggregateResult.class, "stats", "value.a", 5);
 
         assertEquals(1.0, stats.getMin(), 0.0);
         assertEquals(3.0, stats.getMean(), 0.0);
@@ -189,46 +117,23 @@ public final class AggregateTest extends BaseClientTest {
 
     @Test
     public void testRangeAggregate() throws InterruptedException {
-        KvMetadata kvMetadata;
-        kvMetadata = client.kv(collection(), "key1").put("{\"a\":1.0}").get();
-        kvMetadata = client.kv(collection(), "key2").put("{\"a\":2.0}").get();
-        kvMetadata = client.kv(collection(), "key3").put("{\"a\":3.0}").get();
-        kvMetadata = client.kv(collection(), "key4").put("{\"a\":4.0}").get();
-        kvMetadata = client.kv(collection(), "key5").put("{\"a\":5.0}").get();
+        insertItem("key1", "{`a`:1.0}");
+        insertItem("key2", "{`a`:2.0}");
+        insertItem("key3", "{`a`:3.0}");
+        insertItem("key4", "{`a`:4.0}");
+        insertItem("key5", "{`a`:5.0}");
 
-        // give time for the writes to hit the search index
-        Thread.sleep(1000);
+        AggregateResult aggregate = searchForAgg(Aggregate.builder().range(
+                "value.a",
+                Range.below(-10),
+                Range.between(-10, 0),
+                Range.between(0, 2),
+                Range.between(2, 4),
+                Range.between(4, 10),
+                Range.above(10)
+        ));
 
-        final SearchResults<String> results =
-                client.searchCollection(kvMetadata.getCollection())
-                      .offset(0).limit(0)
-                      .aggregate(Aggregate.builder().range(
-                          "value.a",
-                          Range.below(-10),
-                          Range.between(-10, 0),
-                          Range.between(0, 2),
-                          Range.between(2, 4),
-                          Range.between(4, 10),
-                          Range.above(10)
-                      ).build())
-                      .get(String.class, "*")
-                      .get();
-
-        assertNotNull(results);
-        assertNotNull(results.getAggregates());
-        assertNotNull(results.getAggregates().iterator());
-        assertTrue(results.getAggregates().iterator().hasNext());
-
-        Iterator<AggregateResult> i = results.getAggregates().iterator();
-        AggregateResult aggregate = i.next();
-
-        assertNotNull(aggregate);
-        assertTrue(aggregate instanceof RangeAggregateResult);
-        RangeAggregateResult range = (RangeAggregateResult) aggregate;
-
-        assertEquals(range.getAggregateKind(), "range");
-        assertEquals(range.getFieldName(), "value.a");
-        assertEquals(range.getValueCount(), 5L);
+        RangeAggregateResult range = assertAggregate(aggregate, RangeAggregateResult.class, "range", "value.a", 5);
 
         List<RangeBucket> buckets = range.getBuckets();
         assertRangeBucketEquals(buckets.get(0), Double.NEGATIVE_INFINITY, -10.0, 0L);
@@ -239,54 +144,25 @@ public final class AggregateTest extends BaseClientTest {
         assertRangeBucketEquals(buckets.get(5), 10.0, Double.POSITIVE_INFINITY, 0L);
     }
 
-    private static final void assertRangeBucketEquals(RangeBucket bucket, double min, double max, long count) {
-        assertEquals(min, bucket.getMin(), 0.0);
-        assertEquals(max, bucket.getMax(), 0.0);
-        assertEquals(count, bucket.getCount());
-    }
-
     @Test
     public void testDistanceAggregate() throws InterruptedException {
-        KvMetadata kvMetadata;
         // Each degree of longitude is equal to about 111.32 km at the equator
-        kvMetadata = client.kv(collection(), "key1").put("{\"lat\":0.0,\"lon\":0.0}").get();
-        kvMetadata = client.kv(collection(), "key2").put("{\"lat\":0.0,\"lon\":1.0}").get();
-        kvMetadata = client.kv(collection(), "key3").put("{\"lat\":0.0,\"lon\":-1.0}").get();
-        kvMetadata = client.kv(collection(), "key4").put("{\"lat\":0.0,\"lon\":2.0}").get();
-        kvMetadata = client.kv(collection(), "key5").put("{\"lat\":0.0,\"lon\":-2.0}").get();
-        kvMetadata = client.kv(collection(), "key6").put("{\"lat\":0.0,\"lon\":3.0}").get();
-        kvMetadata = client.kv(collection(), "key7").put("{\"lat\":0.0,\"lon\":-3.0}").get();
+        insertItem("key1", "{`lat`:0.0,`lon`:0.0}");
+        insertItem("key2", "{`lat`:0.0,`lon`:1.0}");
+        insertItem("key3", "{`lat`:0.0,`lon`:-1.0}");
+        insertItem("key4", "{`lat`:0.0,`lon`:2.0}");
+        insertItem("key5", "{`lat`:0.0,`lon`:-2.0}");
+        insertItem("key6", "{`lat`:0.0,`lon`:3.0}");
+        insertItem("key7", "{`lat`:0.0,`lon`:-3.0}");
 
-        // give time for the writes to hit the search index
-        Thread.sleep(1000);
+        AggregateResult aggregate = searchForAgg("value:NEAR:{lat:0 lon:0 dist:500km}", Aggregate.builder().distance(
+              "value",
+              Range.between(0, 112),
+              Range.between(112, 224),
+              Range.above(224)
+        ));
 
-        final SearchResults<String> results =
-                client.searchCollection(kvMetadata.getCollection())
-                      .offset(0).limit(0)
-                      .aggregate(Aggregate.builder().distance(
-                          "value",
-                          Range.between(0, 112),
-                          Range.between(112, 224),
-                          Range.above(224)
-                      ).build())
-                      .get(String.class, "value:NEAR:{lat:0 lon:0 dist:500km }")
-                      .get();
-
-        assertNotNull(results);
-        assertNotNull(results.getAggregates());
-        assertNotNull(results.getAggregates().iterator());
-        assertTrue(results.getAggregates().iterator().hasNext());
-
-        Iterator<AggregateResult> i = results.getAggregates().iterator();
-        AggregateResult aggregate = i.next();
-
-        assertNotNull(aggregate);
-        assertTrue(aggregate instanceof DistanceAggregateResult);
-        DistanceAggregateResult distance = (DistanceAggregateResult) aggregate;
-
-        assertEquals("distance", distance.getAggregateKind());
-        assertEquals("value", distance.getFieldName());
-        assertEquals(7L, distance.getValueCount());
+        DistanceAggregateResult distance = assertAggregate(aggregate, DistanceAggregateResult.class, "distance", "value", 7);
 
         List<RangeBucket> buckets = distance.getBuckets();
         assertRangeBucketEquals(buckets.get(0), 0.0, 112.0, 3L);
@@ -296,45 +172,21 @@ public final class AggregateTest extends BaseClientTest {
 
     @Test
     public void testTimeSeriesDayAggregate() throws InterruptedException {
-        KvMetadata kvMetadata;
-        // Each degree of longitude is equal to about 111.32 km at the equator
-        kvMetadata = client.kv(collection(), "key1").put("{\"some_date\":\"2014-12-01T05:15:21.123Z\"}").get();
-        kvMetadata = client.kv(collection(), "key2").put("{\"some_date\":\"2014-12-02T07:55:19.433Z\"}").get();
-        kvMetadata = client.kv(collection(), "key3").put("{\"some_date\":\"2014-12-02T18:48:35.909Z\"}").get();
-        kvMetadata = client.kv(collection(), "key4").put("{\"some_date\":\"2014-12-03T12:01:21.451Z\"}").get();
-        kvMetadata = client.kv(collection(), "key5").put("{\"some_date\":\"2014-12-04T16:40:56.202Z\"}").get();
-        kvMetadata = client.kv(collection(), "key6").put("{\"some_date\":\"2014-12-04T18:33:36.555Z\"}").get();
-        kvMetadata = client.kv(collection(), "key7").put("{\"some_date\":\"2014-12-04T22:20:04.753Z\"}").get();
+        insertItem("key1", "{`some_date`:`2014-12-01T05:15:21.123Z`}");
+        insertItem("key2", "{`some_date`:`2014-12-02T07:55:19.433Z`}");
+        insertItem("key3", "{`some_date`:`2014-12-02T18:48:35.909Z`}");
+        insertItem("key4", "{`some_date`:`2014-12-03T12:01:21.451Z`}");
+        insertItem("key5", "{`some_date`:`2014-12-04T16:40:56.202Z`}");
+        insertItem("key6", "{`some_date`:`2014-12-04T18:33:36.555Z`}");
+        insertItem("key7", "{`some_date`:`2014-12-04T22:20:04.753Z`}");
 
-        // give time for the writes to hit the search index
-        Thread.sleep(1000);
+        AggregateResult aggregate = searchForAgg(Aggregate.builder()
+              .timeSeries("value.some_date", TimeInterval.DAY)
+        );
 
-        final SearchResults<String> results =
-                client.searchCollection(kvMetadata.getCollection())
-                      .aggregate(Aggregate.builder()
-                          .timeSeries("value.some_date", TimeInterval.DAY)
-                          .build()
-                      )
-                      .offset(0).limit(0)
-                      .get(String.class, "*")
-                      .get();
+        TimeSeriesAggregateResult timeSeries = assertAggregate(aggregate, TimeSeriesAggregateResult.class, "time_series", "value.some_date", 7);
 
-        assertNotNull(results);
-        assertNotNull(results.getAggregates());
-        assertNotNull(results.getAggregates().iterator());
-        assertTrue(results.getAggregates().iterator().hasNext());
-
-        Iterator<AggregateResult> i = results.getAggregates().iterator();
-        AggregateResult aggregate = i.next();
-
-        assertNotNull(aggregate);
-        assertTrue(aggregate instanceof TimeSeriesAggregateResult);
-        TimeSeriesAggregateResult timeSeries = (TimeSeriesAggregateResult) aggregate;
-
-        assertEquals(timeSeries.getAggregateKind(), "time_series");
-        assertEquals(timeSeries.getFieldName(), "value.some_date");
-        assertEquals(timeSeries.getValueCount(), 7L);
-        //assertEquals(timeSeries.getInterval(), "day");
+        assertEquals(timeSeries.getInterval(), TimeInterval.DAY);
 
         List<TimeSeriesBucket> buckets = timeSeries.getBuckets();
         assertTimeSeriesBucketEquals(buckets.get(0), "2014-12-01", 1L);
@@ -345,45 +197,22 @@ public final class AggregateTest extends BaseClientTest {
 
     @Test
     public void testTimeSeriesDayAggregateWithTimeZone() throws InterruptedException {
-        KvMetadata kvMetadata;
-        // Each degree of longitude is equal to about 111.32 km at the equator
-        kvMetadata = client.kv(collection(), "key1").put("{\"some_date\":\"2014-12-01T05:15:21.123Z\"}").get();
-        kvMetadata = client.kv(collection(), "key2").put("{\"some_date\":\"2014-12-02T07:55:19.433Z\"}").get();
-        kvMetadata = client.kv(collection(), "key3").put("{\"some_date\":\"2014-12-02T18:48:35.909Z\"}").get();
-        kvMetadata = client.kv(collection(), "key4").put("{\"some_date\":\"2014-12-03T12:01:21.451Z\"}").get();
-        kvMetadata = client.kv(collection(), "key5").put("{\"some_date\":\"2014-12-04T16:40:56.202Z\"}").get();
-        kvMetadata = client.kv(collection(), "key6").put("{\"some_date\":\"2014-12-04T18:33:36.555Z\"}").get();
-        kvMetadata = client.kv(collection(), "key7").put("{\"some_date\":\"2014-12-04T22:20:04.753Z\"}").get();
+        insertItem("key1", "{`some_date`:`2014-12-01T05:15:21.123Z`}");
+        insertItem("key2", "{`some_date`:`2014-12-02T07:55:19.433Z`}");
+        insertItem("key3", "{`some_date`:`2014-12-02T18:48:35.909Z`}");
+        insertItem("key4", "{`some_date`:`2014-12-03T12:01:21.451Z`}");
+        insertItem("key5", "{`some_date`:`2014-12-04T16:40:56.202Z`}");
+        insertItem("key6", "{`some_date`:`2014-12-04T18:33:36.555Z`}");
+        insertItem("key7", "{`some_date`:`2014-12-04T22:20:04.753Z`}");
 
-        // give time for the writes to hit the search index
-        Thread.sleep(1000);
+        AggregateResult aggregate = searchForAgg(Aggregate.builder()
+                .timeSeries("value.some_date", TimeInterval.DAY, "+1100")
+        );
 
-        final SearchResults<String> results =
-                client.searchCollection(kvMetadata.getCollection())
-                      .aggregate(Aggregate.builder()
-                          .timeSeries("value.some_date", TimeInterval.DAY, "+1100")
-                          .build()
-                      )
-                      .offset(0).limit(0)
-                      .get(String.class, "*")
-                      .get();
+        TimeSeriesAggregateResult timeSeries = assertAggregate(aggregate, TimeSeriesAggregateResult.class, "time_series", "value.some_date", 7);
 
-        assertNotNull(results);
-        assertNotNull(results.getAggregates());
-        assertNotNull(results.getAggregates().iterator());
-        assertTrue(results.getAggregates().iterator().hasNext());
-
-        Iterator<AggregateResult> i = results.getAggregates().iterator();
-        AggregateResult aggregate = i.next();
-
-        assertNotNull(aggregate);
-        assertTrue(aggregate instanceof TimeSeriesAggregateResult);
-        TimeSeriesAggregateResult timeSeries = (TimeSeriesAggregateResult) aggregate;
-
-        assertEquals(timeSeries.getAggregateKind(), "time_series");
-        assertEquals(timeSeries.getFieldName(), "value.some_date");
-        assertEquals(timeSeries.getValueCount(), 7L);
-        //assertEquals(timeSeries.getInterval(), "day");
+        assertEquals(timeSeries.getInterval(), TimeInterval.DAY);
+        assertEquals(timeSeries.getTimeZone(), "+1100");
 
         List<TimeSeriesBucket> buckets = timeSeries.getBuckets();
         assertTimeSeriesBucketEquals(buckets.get(0), "2014-12-01", 1L);
@@ -392,9 +221,53 @@ public final class AggregateTest extends BaseClientTest {
         assertTimeSeriesBucketEquals(buckets.get(3), "2014-12-05", 3L);
     }
 
-    private static final void assertTimeSeriesBucketEquals(TimeSeriesBucket bucket, String value, long count) {
+    private static void assertTimeSeriesBucketEquals(TimeSeriesBucket bucket, String value, long count) {
         assertEquals(value, bucket.getBucket());
         assertEquals(count, bucket.getCount());
+    }
+
+    private static void assertRangeBucketEquals(RangeBucket bucket, double min, double max, long count) {
+        assertEquals(min, bucket.getMin(), 0.0);
+        assertEquals(max, bucket.getMax(), 0.0);
+        assertEquals(count, bucket.getCount());
+    }
+
+    private void assertCountedValueEquals(CountedValue countedValue, Object expectedValue, long expectedCount) {
+        assertEquals(expectedValue, countedValue.getValue());
+        assertEquals(expectedCount, countedValue.getCount());
+    }
+
+    public <T extends AggregateResult> T assertAggregate(AggregateResult result, Class<T> expectedClazz, String expectedKind, String expectedField, long expectedValCount) {
+        assertEquals(result.getAggregateKind(), expectedKind);
+        assertEquals(result.getFieldName(), expectedField);
+        assertEquals(result.getValueCount(), expectedValCount);
+        return expectedClazz.cast(result);
+    }
+
+    private AggregateResult searchForAgg(Aggregate aggQuery) throws InterruptedException {
+        return searchForAgg("*", aggQuery);
+    }
+
+    private AggregateResult searchForAgg(String searchQuery, Aggregate aggQuery) throws InterruptedException {
+        // give time for the writes to hit the search index
+        Thread.sleep(1000);
+
+        SearchResults<String> results = client.searchCollection(collection())
+                .offset(0).limit(0)
+                .aggregate(aggQuery.build())
+                .get(String.class, searchQuery)
+                .get();
+        assertNotNull(results);
+        assertNotNull(results.getAggregates());
+        Iterator<AggregateResult> aggIter = results.getAggregates().iterator();
+        assertNotNull(aggIter);
+        assertTrue(aggIter.hasNext());
+
+        AggregateResult firstAggResult = aggIter.next();
+
+        assertNotNull(firstAggResult);
+
+        return firstAggResult;
     }
 
 }
