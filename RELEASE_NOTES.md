@@ -1,8 +1,9 @@
-- 0.10.0-SNAPSHOT (Not yet released)
+- 0.11.0-SNAPSHOT (Not released yet)
+- 0.10.0: 2015-04-13
  * Top Values aggregate support.
  * Upsert support
  * New Patch ops (init, append, nested patch, nested merge, test field present/missing)
-- 0.9.0: 2015-05-03
+- 0.9.0: 2015-03-05
  * Event Search Support
 - 0.8.0: 2015-02-03
  * Timezone Support for Timeseries aggregations
