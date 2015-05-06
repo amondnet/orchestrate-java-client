@@ -10,8 +10,5 @@ script:
 
 notifications:
   email: false
-  hipchat:
-    rooms:
-      - c92bad93fc0d9c2d195d80c7be121a@Orchestrate
-    template:
-      - '%{repository}#%{build_number} (%{branch} - %{commit} : %{author}): %{message} %{build_url}'
+  slack:
+    secure: mWsEjbJ2vWTqvOIaeosHtMzO1iT3rSYbv+sufQz8bv30syzyz0I0ca8TEQ5TRySDOKbm9wPXupuLadpLqx4HmzHvDeDPZvswZHSKVnWm36Ybb8xzIU10R5BF4Z+vVMwevWNtYAS8/z5jXz4Xm4gQlloFRRvSwjGh14m12qERLkE=
