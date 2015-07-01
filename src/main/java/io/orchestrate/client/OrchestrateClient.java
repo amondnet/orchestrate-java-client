@@ -118,8 +118,11 @@ public class OrchestrateClient implements Client {
             filterChainBuilder.add(new SSLFilter(serverConfig, clientConfig));
         }
 
+        HttpClientFilter httpClientFilter = new HttpClientFilter();
+        httpClientFilter.addContentEncoding(new GZipContentEncoding());
+
         filterChainBuilder
-                .add(new HttpClientFilter())
+                .add(httpClientFilter)
                 .add(new ClientFilter(builder.apiKey, builder.host, builder.userAgent));
         // TODO experiment with the Leader-Follower IOStrategy
         this.transport = TCPNIOTransportBuilder.newInstance()
