@@ -167,6 +167,7 @@ final class ClientFilter extends BaseFilter {
         httpHeader.setProtocol(Protocol.HTTP_1_1);
         httpHeader.setHeader(Header.Host, host);
         httpHeader.setHeader(Header.UserAgent, userAgentValue);
+        httpHeader.setHeader(Header.AcceptEncoding, "gzip");
 
         // add basic auth information
         httpHeader.addHeader(Header.Authorization, authHeaderValue);
