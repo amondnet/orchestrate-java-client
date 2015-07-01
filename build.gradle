@@ -98,6 +98,7 @@ task integTest(type: Test, dependsOn: jar) {
 
     systemProperty 'jar.path', jar.archivePath
     systemProperty 'orchestrate.apiKey', project.getProperty('orchestrate.apiKey')
+    systemProperty 'orchestrate.host', project.getProperty('orchestrate.host')
 }
 
 jar {

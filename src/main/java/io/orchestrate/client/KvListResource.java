@@ -43,7 +43,11 @@ public class KvListResource extends BaseResource {
     /** The start of the key range to paginate from. */
     private @Nullable String startKey;
     /** Include the specified "startKey" if it exists. */
-    private boolean inclusive;
+    private boolean startInclusive;
+    /** The end of the key range to paginate from. */
+    private @Nullable String stopKey;
+    /** Include the specified "startKey" if it exists. */
+    private boolean stopInclusive;
     /** The number of KV objects to retrieve. */
     private int limit;
     /** Whether to retrieve the values for the list of objects. */
@@ -57,7 +61,8 @@ public class KvListResource extends BaseResource {
         assert (collection.length() > 0);
 
         this.collection = collection;
-        this.inclusive = false;
+        this.startInclusive = false;
+        this.stopInclusive = false;
         this.limit = 10;
         this.withValues = true;
     }
@@ -82,16 +87,24 @@ public class KvListResource extends BaseResource {
      * @return The prepared get request.
      */
     public <T> OrchestrateRequest<KvList<T>> get(final @NonNull Class<T> clazz) {
-        checkArgument(!inclusive || startKey != null, "'inclusive' requires 'startKey' for request.");
+        checkArgument(!startInclusive || startKey != null, "'startInclusive' requires 'startKey' for request.");
+        checkArgument(!stopInclusive || stopKey != null, "'stopInclusive' requires 'stopKey' for request.");
 
         final String uri = client.uri(collection);
         String query = "limit=".concat(Integer.toString(limit));
         query = query.concat("&values=").concat(Boolean.toString(withValues));
         if (startKey != null) {
-            final String keyName = (inclusive) ? "startKey" : "afterKey";
+            final String keyName = (startInclusive) ? "startKey" : "afterKey";
             query = query
                     .concat('&' + keyName + '=')
                     .concat(client.encode(startKey));
+        }
+
+        if (stopKey != null) {
+            final String keyName = (stopInclusive) ? "endKey" : "beforeKey";
+            query = query
+                    .concat('&' + keyName + '=')
+                    .concat(client.encode(stopKey));
         }
 
         final HttpContent packet = HttpRequestPacket.builder()
@@ -149,6 +162,7 @@ public class KvListResource extends BaseResource {
      *
      * @return The KV list resource.
      * @see #inclusive(boolean)
+     * @deprecated Use startKey(String, boolean)
      */
     public KvListResource inclusive() {
         return inclusive(Boolean.TRUE);
@@ -160,9 +174,10 @@ public class KvListResource extends BaseResource {
      *
      * @param inclusive Whether to include the 'startKey' in the result set.
      * @return The KV list resource.
+     * @deprecated Use startKey(String, boolean)
      */
     public KvListResource inclusive(final boolean inclusive) {
-        this.inclusive = inclusive;
+        this.startInclusive = inclusive;
 
         return this;
     }
@@ -180,14 +195,56 @@ public class KvListResource extends BaseResource {
     }
 
     /**
-     * The start of the key range to paginate from including the specified value
+     * The start (non-inclusive) of the key range to paginate from including the specified value
      * if it exists.
      *
      * @param startKey The start of the key range to paginate from.
      * @return The KV list resource.
      */
     public KvListResource startKey(final String startKey) {
+        startKey(startKey, false);
+
+        return this;
+    }
+
+    /**
+     * The start of the key range to paginate from including the specified value
+     * if it exists.
+     *
+     * @param startKey The start of the key range to paginate from.
+     * @return The KV list resource.
+     */
+    public KvListResource startKey(final String startKey, final boolean inclusive) {
         this.startKey = checkNotNullOrEmpty(startKey, "startKey");
+        this.startInclusive = inclusive;
+
+        return this;
+    }
+
+    /**
+     * The end (non-inclusive) of the key range to paginate from including the specified value
+     * if it exists.
+     *
+     * @param stopKey The end of the key range to paginate from.
+     * @return The KV list resource.
+     */
+    public KvListResource stopKey(final String stopKey) {
+        stopKey(stopKey, false);
+
+        return this;
+    }
+
+    /**
+     * The end of the key range to paginate from including the specified value
+     * if it exists.
+     *
+     * @param stopKey The end of the key range to paginate from.
+     * @param inclusive true to include the specified key in the results, false to stop just before it.
+     * @return The KV list resource.
+     */
+    public KvListResource stopKey(final String stopKey, final boolean inclusive) {
+        this.stopKey = checkNotNullOrEmpty(stopKey, "stopKey");
+        this.stopInclusive = inclusive;
 
         return this;
     }
