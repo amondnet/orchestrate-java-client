@@ -128,6 +128,7 @@ public class OrchestrateClient implements Client {
         this.transport = TCPNIOTransportBuilder.newInstance()
                 .setTcpNoDelay(true)
                 .setKeepAlive(true)
+                .setSelectorThreadPoolConfig(poolConfig)
                 .setWorkerThreadPoolConfig(poolConfig)
                 .setIOStrategy(WorkerThreadIOStrategy.getInstance())
                 .setProcessor(filterChainBuilder.build())
