@@ -20,10 +20,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.glassfish.grizzly.http.HttpContent;
+import org.glassfish.grizzly.http.HttpRequestPacket;
+import org.glassfish.grizzly.http.Method;
 import org.glassfish.grizzly.http.util.Header;
 import org.glassfish.grizzly.utils.BufferInputStream;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.Charset;
 
 /**
@@ -84,5 +87,26 @@ abstract class BaseResource {
 
         return ResponseConverterUtil.jsonToKvObject(mapper, rawValue, clazz, collection, key, ref);
     }
+
+    protected <T> OrchestrateRequest<T> parseLink(String name, JsonNode jsonNode, ResponseConverter<T> clazz) {
+        final OrchestrateRequest<T> next;
+        if (jsonNode.has(name)) {
+            final String page = jsonNode.get(name).asText();
+            final URI url = URI.create(page);
+            final HttpContent packet = HttpRequestPacket.builder()
+                    .method(Method.GET)
+                    .uri(url.getPath())
+                    .query(url.getQuery())
+                    .build()
+                    .httpContentBuilder()
+                    .build();
+            next = new OrchestrateRequest<T>(client, packet, clazz, false);
+        } else {
+            next = null;
+        }
+        return next;
+    }
+
+
 
 }

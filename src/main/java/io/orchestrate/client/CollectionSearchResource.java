@@ -137,10 +137,11 @@ public class CollectionSearchResource extends BaseResource {
         if (aggregateFields != null) {
             buff.append("&aggregate=").append(client.encode(aggregateFields));
         }
+        final String uri = client.uri(collection);
 
         final HttpContent packet = HttpRequestPacket.builder()
                 .method(Method.GET)
-                .uri(client.uri(collection))
+                .uri(uri)
                 .query(buff.toString())
                 .build()
                 .httpContentBuilder()
@@ -158,7 +159,7 @@ public class CollectionSearchResource extends BaseResource {
                 final int count = jsonNode.get("count").asInt();
                 final List<Result<T>> results = new ArrayList<Result<T>>(count);
 
-                List<AggregateResult> aggregates = Collections.<AggregateResult>emptyList();
+                List<AggregateResult> aggregates = Collections.emptyList();
                 if (jsonNode.has("aggregates")) {
                     aggregates = AggregateResult.from((ArrayNode) jsonNode.get("aggregates"));
                 }
@@ -180,7 +181,10 @@ public class CollectionSearchResource extends BaseResource {
                     results.add(new Result<T>(kvObject, score, distance));
                 }
 
-                return new SearchResults<T>(results, totalCount, aggregates);
+                final OrchestrateRequest<SearchResults<T>> next = parseLink("next", jsonNode, this);
+                final OrchestrateRequest<SearchResults<T>> prev = parseLink("prev", jsonNode, this);
+
+                return new SearchResults<T>(results, totalCount, aggregates, next, prev);
             }
         });
     }

@@ -22,10 +22,7 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -98,46 +95,38 @@ public final class SearchTest extends BaseClientTest {
 
     @Test
     public void getSearchCollectionAndPaginate() throws InterruptedException {
-        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
-        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
+        insertItem("key1", "{}");
+        insertItem("key2", "{}");
+        insertItem("key3", "{}");
+        insertItem("key4", "{}");
 
-        final SearchResults<String> results1 = search()
-                      .limit(10)
+        final SearchResults<String> page1 = search()
+                      .limit(2)
                       .offset(0)
                       .sort("key")
                       .get(String.class, "*")
                       .get();
 
-        final SearchResults<String> results2 = search()
-                      .offset(1)
-                      .sort("key")
-                      .get(String.class, "*")
-                      .get();
+        assertEquals(Arrays.asList("key1", "key2"), keys(page1));
+        assertTrue(page1.hasNext());
+        assertFalse(page1.hasPrev());
 
-        assertNotNull(results1);
-        assertNotNull(results2);
-        assertTrue(results1.iterator().hasNext());
-        assertTrue(results2.iterator().hasNext());
+        final SearchResults<String> page2 = page1.getNext().get();
 
-        final Result<String> result1 = results1.iterator().next();
-        assertNotNull(result1);
+        assertEquals(Arrays.asList("key3", "key4"), keys(page2));
+        assertFalse(page2.hasNext());
+        assertTrue(page2.hasPrev());
 
-        final KvObject<String> kvObject1 = result1.getKvObject();
-        assertNotNull(kvObject1);
-        assertEquals(kvMetadata1.getCollection(), kvObject1.getCollection());
-        assertEquals(kvMetadata1.getKey(), kvObject1.getKey());
-        assertEquals(kvMetadata1.getRef(), kvObject1.getRef());
-        assertEquals("{}", kvObject1.getValue());
+        final SearchResults<String> backToPage1 = page2.getPrev().get();
+        assertEquals(Arrays.asList("key1", "key2"), keys(backToPage1));
+    }
 
-        final Result<String> result2 = results2.iterator().next();
-        assertNotNull(result2);
-
-        final KvObject<String> kvObject2 = result2.getKvObject();
-        assertNotNull(kvObject2);
-        assertEquals(kvMetadata2.getCollection(), kvObject2.getCollection());
-        assertEquals(kvMetadata2.getKey(), kvObject2.getKey());
-        assertEquals(kvMetadata2.getRef(), kvObject2.getRef());
-        assertEquals("{}", kvObject2.getValue());
+    private List<String> keys(SearchResults<String> page) {
+        List<String> keys = new ArrayList<String>();
+        for(Result<String> result : page.getResults()) {
+            keys.add(result.getKvObject().getKey());
+        }
+        return keys;
     }
 
     @Test

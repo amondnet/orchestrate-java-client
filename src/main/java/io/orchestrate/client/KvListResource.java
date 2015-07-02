@@ -24,7 +24,6 @@ import org.glassfish.grizzly.http.Method;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -123,21 +122,7 @@ public class KvListResource extends BaseResource {
 
                 final JsonNode jsonNode = toJsonNode(response);
 
-                final OrchestrateRequest<KvList<T>> next;
-                if (jsonNode.has("next")) {
-                    final String page = jsonNode.get("next").asText();
-                    final URI url = URI.create(page);
-                    final HttpContent packet = HttpRequestPacket.builder()
-                            .method(Method.GET)
-                            .uri(uri)
-                            .query(url.getQuery())
-                            .build()
-                            .httpContentBuilder()
-                            .build();
-                    next = new OrchestrateRequest<KvList<T>>(client, packet, this, false);
-                } else {
-                    next = null;
-                }
+                final OrchestrateRequest<KvList<T>> next = parseLink("next", jsonNode, this);
                 final int count = jsonNode.get("count").asInt();
                 final List<KvObject<T>> results = new ArrayList<KvObject<T>>(count);
 
