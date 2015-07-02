@@ -23,6 +23,7 @@ import org.junit.contrib.theories.Theories;
 import org.junit.contrib.theories.Theory;
 import org.junit.runner.RunWith;
 
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -151,4 +152,68 @@ public final class KvListTest extends BaseClientTest {
         assertNull(kvObject.getValue());
     }
 
+    @Test
+    public void getListWithStartAndEndNonInclusive() {
+        final String collection = collection();
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
+        final KvMetadata kvMetadata3 = insertItem("key3", "{}");
+
+        final KvList<String> kvList =
+                client.listCollection(collection)
+                        .withValues(false)
+                        .startKey("key1")
+                        .stopKey("key3")
+                        .get(String.class)
+                        .get();
+
+        assertNotNull(kvMetadata2);
+        assertNotNull(kvList);
+        assertTrue(kvList.iterator().hasNext());
+
+        final KvObject<String> kvObject = kvList.iterator().next();
+        assertEquals(collection, kvObject.getCollection());
+        assertEquals("key2", kvObject.getKey());
+        assertEquals(kvMetadata2.getRef(), kvObject.getRef());
+        assertNull(kvObject.getValue());
+    }
+
+    @Test
+    public void getListWithStartAndEndInclusive() {
+        final String collection = collection();
+        List<KvMetadata> allMeta = new ArrayList<KvMetadata>();
+        allMeta.add(insertItem("key0", "{}"));
+        allMeta.add(insertItem("key1", "{}"));
+        allMeta.add(insertItem("key2", "{}"));
+        allMeta.add(insertItem("key3", "{}"));
+        allMeta.add(insertItem("key4", "{}"));
+
+        final KvList<String> kvList =
+                client.listCollection(collection)
+                        .withValues(false)
+                        .startKey("key1", true)
+                        .stopKey("key3", true)
+                        .get(String.class)
+                        .get();
+
+        assertNotNull(kvList);
+
+        Iterator<KvObject<String>> kvResultIter = kvList.iterator();
+        List<String> keys = new ArrayList<String>();
+
+        assertTrue(kvResultIter.hasNext());
+        for(int i=1; i<4; i++) {
+            final KvObject<String> result = kvResultIter.next();
+            final KvMetadata expected = allMeta.get(i);
+
+            keys.add(result.getKey());
+            assertEquals(expected.getCollection(), result.getCollection());
+            assertEquals(expected.getKey(), result.getKey());
+            assertEquals(expected.getRef(), result.getRef());
+            assertNull(result.getValue());
+        }
+
+        assertFalse(kvResultIter.hasNext());
+        assertEquals(Arrays.asList("key1", "key2", "key3"), keys);
+    }
 }
