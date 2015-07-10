@@ -1,4 +1,8 @@
-- 0.11.0-SNAPSHOT (Not released yet)
+- 0.11.1-SNAPSHOT (Not released yet)
+- 0.11.0: 2015-07-01
+ * Add support for endKey and beforeKey in kv list
+ * GZip request entity bodies
+ * Request gzipped responses
 - 0.10.0: 2015-04-13
  * Top Values aggregate support.
  * Upsert support
