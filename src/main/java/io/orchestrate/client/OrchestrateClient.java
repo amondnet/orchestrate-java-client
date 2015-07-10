@@ -32,6 +32,8 @@ import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
 import org.glassfish.grizzly.ssl.SSLFilter;
 import org.glassfish.grizzly.strategies.WorkerThreadIOStrategy;
 import org.glassfish.grizzly.threadpool.ThreadPoolConfig;
+import org.glassfish.grizzly.utils.DelayedExecutor;
+import org.glassfish.grizzly.utils.IdleTimeoutFilter;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -121,9 +123,13 @@ public class OrchestrateClient implements Client {
         HttpClientFilter httpClientFilter = new HttpClientFilter();
         httpClientFilter.addContentEncoding(new GZipContentEncoding());
 
+        DelayedExecutor delayedExecutor = IdleTimeoutFilter.createDefaultIdleDelayedExecutor(50, TimeUnit.MILLISECONDS);
+        IdleTimeoutFilter responseTimeoutFilter = new IdleTimeoutFilter(delayedExecutor, builder.responseTimeoutInterval, builder.responseTimeoutUnit);
+
         filterChainBuilder
                 .add(httpClientFilter)
-                .add(new ClientFilter(builder.apiKey, builder.host, builder.userAgent));
+                .add(new ClientFilter(builder.apiKey, builder.host, builder.userAgent))
+                .add(responseTimeoutFilter);
         // TODO experiment with the Leader-Follower IOStrategy
         this.transport = TCPNIOTransportBuilder.newInstance()
                 .setTcpNoDelay(true)
@@ -370,6 +376,10 @@ public class OrchestrateClient implements Client {
         public static final String DEFAULT_HOST = "https://api.orchestrate.io";
         /** The default port for the Orchestrate.io service. */
         public static final int DEFAULT_PORT = 443;
+        /** The default response timeout interval. */
+        public static final int DEFAULT_RESPONSE_TIMEOUT_INTERVAL = 60;
+        /** The default response timeout unit */
+        public static final TimeUnit DEFAULT_RESPONSE_TIMEOUT_UNIT = TimeUnit.SECONDS;
 
         /** An API key for the Orchestrate.io service. */
         private final String apiKey;
@@ -387,6 +397,10 @@ public class OrchestrateClient implements Client {
         private boolean useSSL;
         /** Value to append as the "User-Agent" in requests to Orchestrate. */
         private String userAgent;
+        /** The response timeout interval */
+        private int responseTimeoutInterval;
+        /** The response timeout unit */
+        private TimeUnit responseTimeoutUnit;
 
         private Builder(final String apiKey) {
             checkNotNullOrEmpty(apiKey, "apiKey");
@@ -398,6 +412,7 @@ public class OrchestrateClient implements Client {
             maxPoolSize(Integer.MAX_VALUE);
             mapper(JacksonMapper.builder());
             useSSL(Boolean.TRUE);
+            responseTimeout(DEFAULT_RESPONSE_TIMEOUT_INTERVAL, DEFAULT_RESPONSE_TIMEOUT_UNIT);
         }
 
         /**
@@ -515,6 +530,19 @@ public class OrchestrateClient implements Client {
          */
         public Builder userAgent(final @NonNull String userAgent) {
             this.userAgent = userAgent;
+            return this;
+        }
+
+        /**
+         * Set a custom response timeout length.
+         *
+         * @param responseTimeoutInterval The response timeout interval.
+         * @param responseTimeoutUnit The response timeout time unit.
+         * @return This builder.
+         */
+        public Builder responseTimeout(final int responseTimeoutInterval, final TimeUnit responseTimeoutUnit) {
+            this.responseTimeoutInterval = responseTimeoutInterval;
+            this.responseTimeoutUnit = responseTimeoutUnit;
             return this;
         }
 
