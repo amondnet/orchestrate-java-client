@@ -15,11 +15,14 @@
  */
 package io.orchestrate.client.itest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import io.orchestrate.client.Client;
 import io.orchestrate.client.KvMetadata;
 import io.orchestrate.client.KvObject;
 import io.orchestrate.client.OrchestrateClient;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -37,6 +40,8 @@ import java.util.Set;
 public abstract class BaseClientTest {
     @Rule
     public TestName name = new TestName();
+
+    protected static final ObjectMapper MAPPER = new ObjectMapper();
 
     protected static final Set<String> COLLECTIONS = new HashSet<String>();
     protected static final Random RAND = new Random();
