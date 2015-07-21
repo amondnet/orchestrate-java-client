@@ -15,21 +15,24 @@
  */
 package io.orchestrate.client;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.MissingNode;
+
 import org.glassfish.grizzly.http.HttpContent;
+import org.glassfish.grizzly.http.HttpHeader;
 import org.glassfish.grizzly.http.HttpRequestPacket;
 import org.glassfish.grizzly.http.HttpResponsePacket;
 import org.glassfish.grizzly.http.Method;
+import org.glassfish.grizzly.http.util.Header;
 import org.glassfish.grizzly.http.util.HttpStatus;
+import org.glassfish.grizzly.memory.ByteBufferWrapper;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.NonNull;
 import static io.orchestrate.client.Preconditions.*;
 
 /**
@@ -45,6 +48,10 @@ public class RelationResource extends BaseResource {
     private String destCollection;
     /** The destination key to add the relation to. */
     private String destKey;
+    /** Whether to store the object if no key already exists. */
+    private boolean ifAbsent;
+    /** The last known version of the stored object. */
+    private String objectRef;
     /** Whether to swap the "source" and "destination" objects. */
     private boolean invert;
     /** The number of graph results to retrieve. */
@@ -62,8 +69,105 @@ public class RelationResource extends BaseResource {
 
         this.sourceCollection = sourceCollection;
         this.sourceKey = sourceKey;
+        this.ifAbsent = false;
+        this.objectRef = null;
         this.limit = 10;
         this.offset = 0;
+    }
+
+    /**
+     * Equivalent to {@code this.ifAbsent(Boolean.TRUE)}.
+     *
+     * @return This RelationResource.
+     * @see #ifAbsent(boolean)
+     */
+    public RelationResource ifAbsent() {
+        return ifAbsent(Boolean.TRUE);
+    }
+
+    /**
+     * Whether to store the object if no such relation already exists.
+     *
+     * @param ifAbsent If {@code true}
+     * @return This RelationResource.
+     */
+    public RelationResource ifAbsent(final boolean ifAbsent) {
+        checkArgument(!ifAbsent || objectRef == null, "'ifMatch' and 'ifAbsent' cannot be used together.");
+
+        this.ifAbsent = ifAbsent;
+        return this;
+    }
+
+    /**
+     * The last known version of the stored object to match for the request to
+     * succeed.
+     *
+     * @param objectRef The last known version of the stored object.
+     * @return This RelationResource.
+     */
+    public RelationResource ifMatch(final @NonNull String objectRef) {
+        checkArgument(!ifAbsent, "'ifMatch' and 'ifAbsent' cannot be used together.");
+
+        this.objectRef = objectRef;
+        return this;
+    }
+
+    /**
+     * Retrieve a Relation object.
+     *
+     * <p>Usage:</p>
+     * <pre>
+     * {@code
+     * Relation relation =
+     *         client.relation("someCollection", "someKey")
+     *               .get("someKind", "otherCollection", "otherKey")
+     *               .get();
+     * }
+     * </pre>
+     *
+     * @param kind String The name of the relationship.
+     * @param destCollection String The name of destination collection.
+     * @param destKey String The name of destination key.
+     * @return A prepared get request.
+     */
+    public OrchestrateRequest<Relation> get(final String kind, final String destCollection, final String destKey) {
+
+        checkNotNullOrEmpty(kind, "kind");
+        checkNotNullOrEmpty(destCollection, "destCollection");
+        checkNotNullOrEmpty(destKey, "destKey");
+
+        final String uri = client.uri(sourceCollection, sourceKey, "relation", kind, destCollection, destKey);
+
+        final HttpContent packet = HttpRequestPacket.builder()
+                .method(Method.GET)
+                .uri(uri)
+                .build()
+                .httpContentBuilder()
+                .build();
+
+        return new OrchestrateRequest<Relation>(client, packet, new ResponseConverter<Relation>() {
+            @Override
+            public Relation from(final HttpContent response) throws IOException {
+                final HttpHeader header = response.getHttpHeader();
+                final int status = ((HttpResponsePacket) header).getStatus();
+                assert (status == 200 || status == 404);
+
+                if (status == 404) {
+                    return null;
+                }
+
+                final String ref = header.getHeader(Header.ETag)
+                        .replace("\"", "")
+                        .replace("-gzip", "");
+                JsonNode value = toJsonNodeOrNull(response);
+
+                return new Relation(
+                    sourceCollection, sourceKey,
+                    destCollection, destKey, kind,
+                    ref, value
+                );
+            }
+        });
     }
 
     /**
@@ -163,6 +267,63 @@ public class RelationResource extends BaseResource {
      * @return A prepared put request.
      */
     public OrchestrateRequest<Boolean> put(final String kind) {
+        HttpContent packet = prepareCreateRelation(kind, null);
+        return new OrchestrateRequest<Boolean>(client, packet, new ResponseConverter<Boolean>() {
+            @Override
+            public Boolean from(final HttpContent response) throws IOException {
+                final HttpHeader header = response.getHttpHeader();
+                final int status = ((HttpResponsePacket) header).getStatus();
+                return status == HttpStatus.CREATED_201.getStatusCode();
+            }
+        });
+
+    }
+
+    /**
+     * Store a relationship, with an associated JSON property object,
+     * between two objects in the Orchestrate service.
+     *
+     * <p>Usage:</p>
+     * <pre>
+     * {@code
+     * JsonNode properties = new ObjectMapper().readTree("{ \"foo\" : \"bar\" }");
+     * RelationMetadata result =
+     *         client.relation("someCollection", "someKey")
+     *               .to("anotherCollection", "anotherKey")
+     *               .put(kind, properties)
+     *               .get();
+     * }
+     * </pre>
+     *
+     * @param kind The name of the relationship to create.
+     * @param properties A json object representing the properties of this relationship.
+     * @return A prepared create request.
+     */
+    public OrchestrateRequest<RelationMetadata> put(final String kind, final JsonNode properties) {
+        HttpContent packet = prepareCreateRelation(kind, properties);
+        return new OrchestrateRequest<RelationMetadata>(client, packet, new ResponseConverter<RelationMetadata>() {
+            @Override
+            public RelationMetadata from(final HttpContent response) throws IOException {
+                final HttpHeader header = response.getHttpHeader();
+                final int status = ((HttpResponsePacket) header).getStatus();
+
+                if (status == HttpStatus.CREATED_201.getStatusCode()) {
+                    final String ref = header.getHeader(Header.ETag)
+                            .replace("\"", "")
+                            .replace("-gzip", "");
+                    return new Relation(
+                        sourceCollection, sourceKey,
+                        destCollection, destKey,
+                        kind, ref, properties
+                    );
+                }
+                return null;
+            }
+        });
+    }
+
+    private HttpContent prepareCreateRelation(final String kind, final JsonNode properties) {
+
         checkNotNullOrEmpty(kind, "kind");
         checkArgument(destCollection != null && destKey != null,
                 "'destCollection' and 'destKey' required for PUT query.");
@@ -176,20 +337,32 @@ public class RelationResource extends BaseResource {
                 localSourceCollection, localSourceKey, "relation", kind,
                 localDestCollection, localDestKey);
 
-        final HttpContent packet = HttpRequestPacket.builder()
-                .method(Method.PUT)
-                .uri(uri)
-                .build()
-                .httpContentBuilder()
-                .build();
+        HttpRequestPacket.Builder requestBuilder = HttpRequestPacket.builder()
+            .method(Method.PUT)
+            .contentType("application/json")
+            .uri(uri);
 
-        return new OrchestrateRequest<Boolean>(client, packet, new ResponseConverter<Boolean>() {
-            @Override
-            public Boolean from(final HttpContent response) throws IOException {
-                final int status = ((HttpResponsePacket) response.getHttpHeader()).getStatus();
-                return (status == HttpStatus.NO_CONTENT_204.getStatusCode());
-            }
-        });
+        if (objectRef != null) {
+            requestBuilder.header(Header.IfMatch, "\"".concat(objectRef).concat("\""));
+        } else if (ifAbsent) {
+            requestBuilder.header(Header.IfNoneMatch, "\"*\"");
+        }
+
+        byte[] content = null;
+        if (properties != null) {
+            content = toJsonBytes(properties);
+            requestBuilder.contentLength(content.length);
+        }
+
+        HttpRequestPacket request = requestBuilder.build();
+
+        HttpContent.Builder<?> httpContentBuilder = request.httpContentBuilder();
+        if (properties != null) {
+            httpContentBuilder.content(new ByteBufferWrapper(ByteBuffer.wrap(content)));
+        }
+
+        HttpContent packet = httpContentBuilder.build();
+        return packet;
     }
 
     /**
@@ -307,19 +480,6 @@ public class RelationResource extends BaseResource {
     public RelationResource offset(final int offset) {
         this.offset = checkNotNegative(offset, "offset");
         return this;
-    }
-
-    private static JsonNode parseJson(final String json, final ObjectMapper mapper)
-            throws IOException {
-        assert (mapper != null);
-
-        try {
-            if(json != null) {
-                return mapper.readTree(json);
-            }
-        } catch(final JsonMappingException ignored) {
-        }
-        return MissingNode.getInstance();
     }
 
 }

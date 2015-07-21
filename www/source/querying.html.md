@@ -462,7 +462,7 @@ String changesJson = "{\"description\":\"Looking at Rust.\"}"
 final KvMetadata updatedMeta =
     client.kv("users", "test@test.com")
         .merge(changesJson)   // send the HTTP PATCH Request
-        .get();			      // block and return the meta  
+        .get();			      // block and return the meta
 
 // print the 'ref' for the stored data
 System.out.println(updatedMeta.getRef());
@@ -786,7 +786,7 @@ The backslashes in the first two examples are necessary to escape
  the quotes in the Java string literal, so that the query is sent
  as a `phrase query`. If the query didn't have the inner quotes
  (for example: "title: foo bar", would be a logical OR, where
- title could have `foo` OR `bar`).  
+ title could have `foo` OR `bar`).
 
 ## <a name="aggregates"></a> [Aggregate Functions](#aggregates)
 
@@ -1486,6 +1486,73 @@ Relationships in Orchestrate are uni-directional, to define a bi-directional
  parameters.
 
 We may lift this restriction in a future release of the client.
+
+### <a name="store-relation-with-properties"></a> [Store Relation with Properties](#store-relation-with-properties)
+
+A relation can optionally include a JSON object, representing the properties
+ of the relationship itself (rather than the properties of the endpoint items).
+
+To store a `relation` between two items, with JSON properties:
+
+```java
+JsonNode properties = new ObjectMapper().readTree("{ \"foo\" : \"bar\" }");
+RelationMetadata result =
+        client.relation("sourceCollection", "sourceKey")
+              .to("destCollection", "destKey")
+              .put("someKind", properties)
+              .get();
+
+if (result != null) {
+    System.out.println("Successfully stored the relation");
+}
+```
+
+#### <a name="relation-conditional-store"></a> [Relation Conditional Store](#relation-conditional-store)
+
+The `RelationMetadata` object returned by the `RelationResource.put()` method includes a `ref`
+string, which can be used to conditinally update the relation properties on a subsequent invocation.
+
+```java
+// update 'friend' relationship if the latest version 'ref' on the server matches
+// the provided 'lastRef'
+String lastRef = "a7d0ba2036de8b02"; // likely kept from an earlier operation
+JsonNode newProperties = new ObjectMapper().readTree("{ \"foo\" : \"bar\" }");
+try {
+    RelationMetadata friendship =
+        client.relation("users", "test1@test.com")
+              .to("users", "test2@test.com")
+              .ifMatch(lastRef)
+              .put("friend", newProperties)
+              .get();
+} catch (ItemVersionMismatchException ex) {
+   // update failed because the refs do not match. This would usually
+   // mean the relation was updated since we last read it.
+}
+
+```
+
+You may also want to be sure you are inserting a NEW Relation, and not unintentionally
+updating a Relation that was already written, with the sime kind, and for the same two items.
+
+```
+// store the new 'friend' data if the key 'test1@test.com' does not
+// already have a 'friend' relation with the key 'test2@test.com'
+JsonNode properties = new ObjectMapper().readTree("{ \"foo\" : \"bar\" }");
+try {
+    RelationMetadata friendship =
+        client.relation("users", "test1@test.com")
+              .to("users", "test2@test.com")
+              .ifAbsent()
+              .put("friend", properties)
+              .get();
+} catch (ItemAlreadyPresentException ex) {
+  // the key 'test@test.com' already has a 'friend' relation with 'test2@test.com'
+}
+```
+
+These "conditional store" operations are very useful in high write concurrency
+ environments. They provide a pre-condition that must be `true` for the store
+ operation to succeed.
 
 ### <a name="purge-relation"></a> [Purge Relation](#purge-relation)
 

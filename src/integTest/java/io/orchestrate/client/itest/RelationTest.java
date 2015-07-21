@@ -31,6 +31,8 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.Matchers.isEmptyString;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeThat;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 
 /**
  * {@link io.orchestrate.client.OrchestrateClient}.
@@ -39,7 +41,7 @@ import static org.junit.Assume.assumeThat;
 public final class RelationTest extends BaseClientTest {
 
     @Test
-    public void getRelation() {
+    public void listRelation() {
         final Iterable<KvObject<String>> results =
                 client.relation(collection(), "key")
                       .get(String.class, "kind")
@@ -50,6 +52,60 @@ public final class RelationTest extends BaseClientTest {
 
     @Theory
     public void getRelation(@ForAll(sampleSize=10) final String kind) {
+        assumeThat(kind, not(isEmptyString()));
+
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
+
+        final Boolean putResult =
+                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                      .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
+                      .put(kind)
+                      .get();
+
+        final Relation getResult =
+                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                      .get(kind, kvMetadata2.getCollection(), kvMetadata2.getKey())
+                      .get();
+
+        assertNotNull(kvMetadata1);
+        assertNotNull(kvMetadata2);
+        assertTrue(putResult);
+        assertNotNull(getResult);
+        assertNotNull(getResult.getRef());
+    }
+
+    @Theory
+    public void getRelationWithProperties(@ForAll(sampleSize=10) final String kind) {
+        assumeThat(kind, not(isEmptyString()));
+
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
+
+        final ObjectNode properties = MAPPER.createObjectNode();
+        properties.put("foo", "bar");
+
+        final RelationMetadata putResult =
+                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                      .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
+                      .put(kind, properties)
+                      .get();
+
+        final Relation getResult =
+                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                      .get(kind, kvMetadata2.getCollection(), kvMetadata2.getKey())
+                      .get();
+
+        assertNotNull(kvMetadata1);
+        assertNotNull(kvMetadata2);
+        assertNotNull(putResult);
+        assertNotNull(getResult);
+        assertNotNull(getResult.getRef());
+        assertEquals(properties, getResult.getValue());
+    }
+
+    @Theory
+    public void listRelations(@ForAll(sampleSize=10) final String kind) {
         assumeThat(kind, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
@@ -80,7 +136,7 @@ public final class RelationTest extends BaseClientTest {
         assertEquals("{}", kvObject.getValue());
     }
 
-    public void getRelationAsync(@ForAll(sampleSize=10) final String kind)
+    public void listRelationAsync(@ForAll(sampleSize=10) final String kind)
             throws InterruptedException {
         assumeThat(kind, not(isEmptyString()));
 
@@ -126,7 +182,7 @@ public final class RelationTest extends BaseClientTest {
     }
 
     @Theory
-    public void getRelationMultiHop(@ForAll(sampleSize=10) final String kind) {
+    public void listRelationsMultiHop(@ForAll(sampleSize=10) final String kind) {
         assumeThat(kind, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
@@ -167,7 +223,7 @@ public final class RelationTest extends BaseClientTest {
     }
 
     @Theory
-    public void getRelationMultiHopAsync(@ForAll(sampleSize=10) final String kind)
+    public void listRelationsMultiHopAsync(@ForAll(sampleSize=10) final String kind)
             throws InterruptedException {
         assumeThat(kind, not(isEmptyString()));
 
@@ -219,6 +275,28 @@ public final class RelationTest extends BaseClientTest {
         assertEquals(kvMetadata3.getKey(), kvObject.getKey());
         assertEquals(kvMetadata3.getRef(), kvObject.getRef());
         assertEquals("{}", kvObject.getValue());
+    }
+
+    @Theory
+    public void putRelationWithProperties(@ForAll(sampleSize=10) final String kind) {
+        assumeThat(kind, not(isEmptyString()));
+
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
+
+        final ObjectNode properties = MAPPER.createObjectNode();
+        properties.put("foo", "bar");
+
+        final RelationMetadata result =
+                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                      .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
+                      .put(kind, properties)
+                      .get();
+
+        assertNotNull(kvMetadata1);
+        assertNotNull(kvMetadata2);
+        assertNotNull(result);
+        assertNotNull(result.getRef());
     }
 
     @Theory

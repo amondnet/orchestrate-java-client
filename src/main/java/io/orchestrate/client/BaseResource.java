@@ -15,8 +15,10 @@
  */
 package io.orchestrate.client;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.glassfish.grizzly.http.HttpContent;
 import org.glassfish.grizzly.http.util.Header;
 import org.glassfish.grizzly.utils.BufferInputStream;
@@ -53,6 +55,15 @@ abstract class BaseResource {
                     : mapper.writeValueAsBytes(value);
         } catch (final Exception e) {
             throw new RuntimeException(e); // FIXME
+        }
+    }
+
+    protected JsonNode toJsonNodeOrNull(HttpContent response) throws IOException {
+        try {
+            return mapper.readTree(new BufferInputStream(response.getContent()));
+        } catch (JsonMappingException e) {
+            // JsonMappingException is thrown whenever trying to parse an empty buffer
+            return null;
         }
     }
 

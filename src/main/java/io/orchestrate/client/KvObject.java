@@ -81,11 +81,12 @@ public class KvObject<T> implements KvMetadata {
      *
      * <p>
      * To get the value as the raw json, call with String.class
+     * </p>
      * <pre>
      * {@code
      * String json = kv.getValue(String.class);
      * }
-     * </p>
+     * </pre>
      * <p>
      * This is equivalent to calling getRawValue. Other common use cases are
      * Map.class (to just get the json as a nested hashmap), or a POJO class
