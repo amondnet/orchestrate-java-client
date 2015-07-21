@@ -15,12 +15,16 @@
  */
 package io.orchestrate.client;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.NonNull;
 import org.glassfish.grizzly.CompletionHandler;
 import org.glassfish.grizzly.GrizzlyFuture;
 import org.glassfish.grizzly.http.HttpContent;
+import org.glassfish.grizzly.http.HttpRequestPacket;
+import org.glassfish.grizzly.http.Method;
 import org.glassfish.grizzly.impl.SafeFutureImpl;
 
+import java.net.URI;
 import java.util.concurrent.*;
 
 import static io.orchestrate.client.Preconditions.checkNotNegative;
@@ -167,5 +171,4 @@ public final class OrchestrateRequest<T> implements Future<T> {
     SafeFutureImpl<HttpContent> getRawResponseFuture() {
         return rawResponseFuture;
     }
-
 }

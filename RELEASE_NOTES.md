@@ -1,6 +1,7 @@
 - 0.11.1-SNAPSHOT (Not released yet)
  * Add support for JSON properties to graph relations
  * Add support for conditional PUT headers (if-match & if-none-match) to graph relations
+ * Add support for prev/next in search queries.
 - 0.11.0: 2015-07-01
  * Add support for endKey and beforeKey in kv list
  * GZip request entity bodies

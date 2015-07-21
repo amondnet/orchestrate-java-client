@@ -66,9 +66,9 @@ public class KvList<T> implements Iterable<KvObject<T>> {
     }
 
     /**
-     * The URL for the next page of the KV objects.
+     * The Request for fetching the next page of the KV objects.
      *
-     * @return The URL of the next page of KV objects.
+     * @return The OrchestrateRequest that will fetch the next page of KV objects.
      */
     @Nullable
     public final OrchestrateRequest<KvList<T>> getNext() {

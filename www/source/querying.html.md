@@ -191,9 +191,24 @@ for (KvObject<User> userKv : results) {
 By default, only the first 10 objects are retrieved. This can be increased up to
  100 per request in `KvListResource#limit(int)` method.
 
-The `KvList` object returns a `next` field with a prepared request with the next
+The `KvList` object has a `next` field with a prepared request to fetch the next
  group of objects (or `null` if there are no more objects), this can be used to
   paginate through the collection.
+
+```java
+KvList<User> results =
+        client.listCollection("users")
+              .get(User.class)
+              .get();
+
+// process first page of results here
+
+// paginate if there is more data
+while (results.hasNext()) {
+    results = results.getNext().get();
+    // process results
+}
+```
 
 It is also possible to retrieve a list of KV objects without their values by
  setting the `withValues(boolean)` method as the request is being built.
@@ -713,6 +728,28 @@ The collection called `users` will be searched with the query `description:java`
  up to `50` results, starting at offset `10` (limit and offset are a
  common pagination mechanism). The result values will be deserialized
  to `User` instances.
+
+The `SearchResults` object has `next`, and `prev` fields with a prepared request
+ to fetch the next or prev group of objects (or `null` if there are no more objects),
+ this can be used to paginate through the search results.
+
+```java
+String luceneQuery = "description:java";
+SearchResults<User> results =
+        client.searchCollection("users")
+              .limit(50)
+              .offset(10)
+              .get(User.class, luceneQuery)
+              .get();
+
+// process first page of results here
+
+// paginate if there are more results
+while (results.hasNext()) {
+  results = results.getNext().get();
+  // process results
+}
+```
 
 In some cases, it may be helpful to only retrieve the matching keys (and refs).
 In this case, use 'withValues(Boolean.FALSE)' to indicate that the item values

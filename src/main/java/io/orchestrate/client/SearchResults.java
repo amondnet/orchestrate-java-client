@@ -37,13 +37,19 @@ public class SearchResults<T> implements Iterable<Result<T>> {
     /** The aggregate results associated with this search. */
     private final List<AggregateResult> aggregates;
 
-    SearchResults(final List<Result<T>> results, final int totalCount, final List<AggregateResult> aggregates) {
+    private final OrchestrateRequest<SearchResults<T>> next;
+    private final OrchestrateRequest<SearchResults<T>> prev;
+
+    SearchResults(final List<Result<T>> results, final int totalCount, final List<AggregateResult> aggregates,
+          final OrchestrateRequest<SearchResults<T>> next, final OrchestrateRequest<SearchResults<T>> prev) {
         assert (results != null);
         assert (totalCount >= 0);
 
         this.results = results;
         this.totalCount = totalCount;
         this.aggregates = aggregates;
+        this.next = next;
+        this.prev = prev;
     }
 
     /**
@@ -88,4 +94,39 @@ public class SearchResults<T> implements Iterable<Result<T>> {
         return results.iterator();
     }
 
+    /**
+     * The Request for fetching the next page of the search results.
+     *
+     * @return The OrchestrateRequest that will fetch the next page of search results.
+     */
+    public OrchestrateRequest<SearchResults<T>> getNext() {
+        return next;
+    }
+
+    /**
+     * Whether there is a URL for the next page of the search results.
+     *
+     * @return The URL of the next page of search results.
+     */
+    public boolean hasNext() {
+        return next != null;
+    }
+
+    /**
+     * The Request for fetching the prev page of the search results.
+     *
+     * @return The OrchestrateRequest that will fetch the prev page of search results.
+     */
+    public OrchestrateRequest<SearchResults<T>> getPrev() {
+        return prev;
+    }
+
+    /**
+     * Whether there is a URL for the prev page of the search results.
+     *
+     * @return The URL of the prev page of search results.
+     */
+    public boolean hasPrev() {
+        return prev != null;
+    }
 }
