@@ -66,7 +66,7 @@ The Orchestrate Java Client is available on
 ```groovy
 dependencies {
     compile(
-[group: 'io.orchestrate', name: 'orchestrate-client', version: '0.9.0']
+[group: 'io.orchestrate', name: 'orchestrate-client', version: '0.11.1']
     )
 }
 ```
@@ -77,7 +77,7 @@ dependencies {
 <dependency>
     <groupId>io.orchestrate</groupId>
     <artifactId>orchestrate-client</artifactId>
-    <version>0.9.0</version>
+    <version>0.11.1</version>
 </dependency>
 ```
 

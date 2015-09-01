@@ -1,3 +1,4 @@
+- 0.11.2 (Not Yet Released)
 - 0.11.1 2017-08-28
  * Add support for JSON properties to graph relations
  * Add support for conditional PUT headers (if-match & if-none-match) to graph relations
