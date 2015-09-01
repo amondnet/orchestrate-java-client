@@ -8,7 +8,7 @@ gradle clean javadoc
 cp -r build/docs/javadoc www/source/javadoc/${VERSION}
 git add . && git commit -am "Add javadocs for ${VERSION}"
 
-(cd www && middleman build)
+(cd www && middleman build && rm -rf build/javadoc/${VERSION} && cp -r source/javadoc/${VERSION} build/javadoc/${VERSION})
 
 rm -rf /tmp/oio-java-client-docs-${VERSION}
 
