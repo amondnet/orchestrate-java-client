@@ -5,10 +5,18 @@ VERSION=`grep version build.gradle | head -1 | tr -d "'" | awk '{print $NF}'`
 
 gradle clean javadoc
 
-cp -r build/docs/javadoc www/source/javadoc/${VERSION}
-git add . && git commit -am "Add javadocs for ${VERSION}"
+(
+cd www 
+middleman build
+rm -rf build/javadoc/${VERSION}
+cp -r ../build/docs/javadoc build/javadoc/${VERSION}
+rm -rf build/javadoc/latest
+cp -r ../build/docs/javadoc build/javadoc/latest
+rm -rf source/javadoc/${VERSION}
+cp -r ../build/docs/javadoc source/javadoc/${VERSION}
+)
 
-(cd www && middleman build && rm -rf build/javadoc/${VERSION} && cp -r source/javadoc/${VERSION} build/javadoc/${VERSION})
+git add . && git commit -am "Add javadocs for ${VERSION}"
 
 rm -rf /tmp/oio-java-client-docs-${VERSION}
 
