@@ -135,7 +135,7 @@
        even easier.</p>
       <pre class="highlight java"><span class="n">Client</span> <span class="n">client</span> <span class="o">=</span> <span class="k">new</span> <span class="n">OrchestrateClient</span><span class="o">(</span><span class="s">&quot;your api key&quot;</span><span class="o">);</span>&#x000A;<span class="n">MyObjectDao</span> <span class="n">dao</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MyObjectDao</span><span class="o">(</span><span class="n">client</span><span class="o">);</span>&#x000A;&#x000A;<span class="c1">// save my object</span>&#x000A;<span class="n">KvMetadata</span> <span class="n">kvMetadata</span> <span class="o">=</span> <span class="n">dao</span><span class="o">.</span><span class="na">save</span><span class="o">(</span><span class="k">new</span> <span class="n">MyObject</span><span class="o">());</span></pre>
       <p>You can read more about the <code>GenericAsyncDao</code> in the
-       <a href="/javadoc/latest/io/orchestrate/client/dao/GenericAsyncDao.html">javadocs</a>.</p>
+       <a href="/javadoc/latest/io/orchestrate/client/dao/GenericAsyncDao/">javadocs</a>.</p>
       
       <h2><a name="dropwizard"></a> <a href="#dropwizard">Dropwizard (Managed)</a></h2>
       
@@ -168,7 +168,7 @@
       <p>To listen for an error in the request you can use a <code>ResponseListener</code>.</p>
       <pre class="highlight java"><span class="kn">import</span> <span class="nn">io.orchestrate.client.ResponseListener</span><span class="o">;</span>&#x000A;&#x000A;<span class="kd">public</span> <span class="kd">class</span> <span class="nc">MyObjectResponseListener</span> <span class="kd">implements</span> <span class="n">ResponseListener</span><span class="o">&lt;</span><span class="n">MyObject</span><span class="o">&gt;</span> <span class="o">{</span>&#x000A;&#x000A;    <span class="nd">@Override</span>&#x000A;    <span class="kd">public</span> <span class="kt">void</span> <span class="n">onFailure</span><span class="o">(</span><span class="kd">final</span> <span class="n">Throwable</span> <span class="n">error</span><span class="o">)</span> <span class="o">{</span>&#x000A;        <span class="cm">/* do something */</span>&#x000A;    <span class="o">}</span>&#x000A;&#x000A;    <span class="nd">@Override</span>&#x000A;    <span class="kd">public</span> <span class="kt">void</span> <span class="n">onSuccess</span><span class="o">(</span><span class="kd">final</span> <span class="n">Boolean</span> <span class="n">object</span><span class="o">)</span> <span class="o">{</span>&#x000A;    <span class="o">}</span>&#x000A;&#x000A;<span class="o">}</span></pre>
       <p>You can read more about the <code>ResponseListener</code> in the
-       <a href="/javadoc/latest/io/orchestrate/client/ResponseListener.html">javadocs</a>.</p>
+       <a href="/javadoc/latest/io/orchestrate/client/ResponseListener/">javadocs</a>.</p>
       <footer>Orchestrate.io &copy; 2014</footer>
     </div>
   </body>
