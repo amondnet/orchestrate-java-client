@@ -28,9 +28,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import static io.orchestrate.client.Preconditions.checkArgument;
-import static io.orchestrate.client.Preconditions.checkNotNull;
-import static io.orchestrate.client.Preconditions.checkNotNullOrEmpty;
+import static io.orchestrate.client.Preconditions.*;
 
 /**
  * The resource for the event features in the Orchestrate API.
@@ -47,6 +45,8 @@ public class EventResource extends BaseResource {
     private Long start;
     /** The timestamp to get events up to. */
     private Long end;
+    /** The number of KV objects to retrieve. */
+    private int limit;
 
     private Long timestamp;
 
@@ -64,6 +64,7 @@ public class EventResource extends BaseResource {
         this.key = key;
         this.start = null;
         this.end = null;
+        this.limit = 10;
     }
 
     /**
@@ -89,13 +90,12 @@ public class EventResource extends BaseResource {
         checkNotNull(type, "type");
 
         final String uri = client.uri(collection, key, "events", type);
-
+        String query = "limit=".concat(Integer.toString(limit));
         final HttpRequestPacket.Builder httpHeaderBuilder = HttpRequestPacket.builder()
                 .method(Method.GET)
                 .uri(uri);
-        String query = null;
         if (start != null) {
-            query += "start=" + start;
+            query += "&start=" + start;
         }
         if (end != null) {
             query += "&end=" + end;
@@ -279,6 +279,12 @@ public class EventResource extends BaseResource {
      */
     public EventResource type(final String type) {
         this.type = checkNotNullOrEmpty(type, "type");
+
+        return this;
+    }
+
+    public EventResource limit(final int limit) {
+        this.limit = checkNotNegative(limit, "limit");
 
         return this;
     }
