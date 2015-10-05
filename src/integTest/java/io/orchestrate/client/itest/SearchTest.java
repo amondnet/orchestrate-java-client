@@ -15,6 +15,7 @@
  */
 package io.orchestrate.client.itest;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.orchestrate.client.*;
 import org.glassfish.grizzly.utils.DataStructures;
 import org.junit.Rule;
@@ -315,6 +316,62 @@ public final class SearchTest extends BaseClientTest {
         List<Result<Void>> resultList = toList(results);
         assertTrue(resultList.get(0).getKvObject() instanceof Event);
         assertFalse(resultList.get(1).getKvObject() instanceof Event);
+    }
+
+    @Test
+    public void searchItemsJsonNode() throws InterruptedException, IOException {
+        String collection = collection();
+        int numValues = 5;
+        for(int i=0;i<numValues;i++) {
+            String key = Long.toHexString(RAND.nextLong());
+            String desc = "This is description test_"+i;
+
+            // write item with the test desc.
+            client.kv(collection, key).put(new User(key, desc)).get();
+        }
+
+        final SearchResults<JsonNode> results = search()
+                .get(JsonNode.class, "description:test_1")
+                .get();
+
+        assertEquals(1, results.getTotalCount());
+
+        // to get the results as an iterable:
+        Iterable<Result<JsonNode>> resultsIter = results.getResults();
+
+        // to transform the results into a list:
+        List<Result<JsonNode>> resultList = toList(results);
+
+        User user = resultList.get(0).getKvObject().getValue(User.class);
+        assertTrue(user.getDescription().contains("test_1"));
+    }
+
+    @Test
+    public void searchItemsPojo() throws InterruptedException, IOException {
+        String collection = collection();
+        int numValues = 5;
+        for(int i=0;i<numValues;i++) {
+            String key = Long.toHexString(RAND.nextLong());
+            String desc = "This is description test_"+i;
+
+            // write item with the test desc.
+            client.kv(collection, key).put(new User(key, desc)).get();
+        }
+
+        final SearchResults<User> results = search()
+                .get(User.class, "description:test_1")
+                .get();
+
+        assertEquals(1, results.getTotalCount());
+
+        // to get the results as an iterable:
+        Iterable<Result<User>> resultsIter = results.getResults();
+
+        // to transform the results into a list:
+        List<Result<User>> resultList = toList(results);
+
+        User user = resultList.get(0).getKvObject().getValue(User.class);
+        assertTrue(user.getDescription().contains("test_1"));
     }
 
     @Test
