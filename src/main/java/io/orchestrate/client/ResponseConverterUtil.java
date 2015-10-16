@@ -15,7 +15,6 @@
  */
 package io.orchestrate.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -37,24 +36,40 @@ final class ResponseConverterUtil {
         // parse the PATH structure (e.g.):
         // {"collection":"coll","key":"aKey","ref":"someRef"}
         final JsonNode path = jsonNode.get("path");
-        if ("event".equals(path.get("kind").asText())) {
+        final String kind = path.get("kind").asText();
+
+        if ("event".equals(kind)) {
             return wrapperJsonToEvent(mapper, jsonNode, clazz);
+        } else if (!"item".equals(kind)) {
+            throw new IllegalStateException(String.format("Unknown kind '%s', cannot parse as a KvObject.", kind));
         }
 
         final String collection = path.get("collection").asText();
         final String key = path.get("key").asText();
         final String ref = path.get("ref").asText();
+        final Long reftime;
+        if (path.has("reftime")) {
+            reftime = path.get("reftime").longValue();
+        } else {
+            reftime = null;
+        }
 
         // parse result structure (e.g.):
         // {"path":{...},"value":{}}
         final JsonNode valueNode = jsonNode.get("value");
 
-        return jsonToKvObject(mapper, valueNode, clazz, collection, key, ref);
+        return jsonToKvObject(mapper, valueNode, clazz, collection, key, ref, reftime);
     }
 
     @SuppressWarnings("unchecked")
     public static <T> KvObject<T> jsonToKvObject(ObjectMapper mapper, JsonNode valueNode, Class<T> clazz,
                                                  String collection, String key, String ref) throws IOException {
+        return jsonToKvObject(mapper, valueNode, clazz, collection, key, ref, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> KvObject<T> jsonToKvObject(ObjectMapper mapper, JsonNode valueNode, Class<T> clazz,
+                                                 String collection, String key, String ref, Long reftime) throws IOException {
         assert (mapper != null);
         assert (clazz != null);
 
@@ -65,7 +80,7 @@ final class ResponseConverterUtil {
             rawValue = (String)value;
         }
 
-        return new KvObject<T>(collection, key, ref, mapper, value, valueNode, rawValue);
+        return new KvObject<T>(collection, key, ref, reftime, mapper, value, valueNode, rawValue);
     }
 
     @SuppressWarnings("unchecked")
@@ -81,7 +96,7 @@ final class ResponseConverterUtil {
 
         final T value = jsonToDomainObject(mapper, valueNode, rawValue, clazz);
 
-        return new KvObject<T>(collection, key, ref, mapper, value, valueNode, rawValue);
+        return new KvObject<T>(collection, key, ref, null, mapper, value, valueNode, rawValue);
     }
 
     @SuppressWarnings("unchecked")
@@ -137,6 +152,12 @@ final class ResponseConverterUtil {
         final String key = path.get("key").textValue();
         final String eventType = path.get("type").textValue();
         final String ref = path.get("ref").textValue();
+        final Long reftime;
+        if (path.has("reftime")) {
+            reftime = path.get("reftime").longValue();
+        } else {
+            reftime = null;
+        }
 
         final long timestamp = path.get("timestamp").longValue();
         final String ordinal = path.get("ordinal").asText();
@@ -149,6 +170,6 @@ final class ResponseConverterUtil {
             rawValue = (String)value;
         }
 
-        return new Event<T>(mapper, collection, key, eventType, timestamp, ordinal, ref, value, valueNode, rawValue);
+        return new Event<T>(mapper, collection, key, eventType, timestamp, ordinal, ref, reftime, value, valueNode, rawValue);
     }
 }

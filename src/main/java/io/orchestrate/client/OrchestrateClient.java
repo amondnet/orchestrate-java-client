@@ -314,7 +314,7 @@ public class OrchestrateClient implements Client {
                     final String ref = header.getHeader(Header.ETag)
                             .replace("\"", "")
                             .replace("-gzip", "");
-                    return new KvObject<Void>(collection, key, ref, builder.mapper.getMapper(), null, null, null);
+                    return new KvObject<Void>(collection, key, ref, null, builder.mapper.getMapper(), null, null, null);
                 }
                 return null;
             }

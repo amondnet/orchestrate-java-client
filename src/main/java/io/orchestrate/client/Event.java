@@ -34,9 +34,9 @@ public class Event<T> extends KvObject<T> implements EventMetadata {
     private final String type;
 
     Event(final ObjectMapper mapper, final String collection, final String key, final String type,
-          final Long timestamp, final String ordinal, final String ref, final T value,
+          final Long timestamp, final String ordinal, final String ref, final Long reftime, final T value,
           final JsonNode valueNode, final String rawValue) {
-        super(collection, key, ref, mapper, value, valueNode, rawValue);
+        super(collection, key, ref, reftime, mapper, value, valueNode, rawValue);
         this.timestamp = timestamp;
         this.ordinal = ordinal;
         this.type = type;
