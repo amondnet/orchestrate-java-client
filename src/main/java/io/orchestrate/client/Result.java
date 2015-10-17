@@ -61,7 +61,16 @@ public class Result<T> {
      * @return true if the result is an Event.
      */
     public final boolean isEvent() {
-        return kvObject instanceof Event;
+        return kvObject.getItemKind().equals(ItemKind.EVENT);
+    }
+
+    /**
+     * Test whether the result kvObject is a Relationship.
+     *
+     * @return true if the result is an Event.
+     */
+    public final boolean isRelationship() {
+        return kvObject.getItemKind().equals(ItemKind.RELATIONSHIP);
     }
 
     /**
@@ -75,6 +84,19 @@ public class Result<T> {
             throw new IllegalStateException("Item is not an event.");
         }
         return (Event<T>)kvObject;
+    }
+
+    /**
+     * Get the result kvObject as a Relationship. If the result is not a
+     * Relationship, an IllegalStateException will be thrown.
+     *
+     * @return the result kvObject as an Event.
+     */
+    public final Relationship<T> getRelationshipObject() {
+        if(!isRelationship()) {
+            throw new IllegalStateException("Item is not a relationship.");
+        }
+        return (Relationship<T>)kvObject;
     }
 
     /**

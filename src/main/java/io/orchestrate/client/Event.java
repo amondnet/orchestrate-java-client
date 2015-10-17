@@ -17,6 +17,7 @@ package io.orchestrate.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
@@ -42,14 +43,25 @@ public class Event<T> extends KvObject<T> implements EventMetadata {
         this.type = type;
     }
 
+    /**
+     * Returns the ItemKind of this object
+     */
+    @Override
+    public ItemKind getItemKind() {
+        return ItemKind.EVENT;
+    }
+
+    @Override
     public String getType() {
         return type;
     }
 
+    @Override
     public Long getTimestamp() {
         return timestamp;
     }
 
+    @Override
     public String getOrdinal() {
         return ordinal;
     }

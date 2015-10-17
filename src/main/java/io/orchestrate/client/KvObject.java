@@ -68,6 +68,13 @@ public class KvObject<T> implements KvMetadata {
     }
 
     /**
+     * Returns the ItemKind of this object
+     */
+    public ItemKind getItemKind() {
+        return ItemKind.ITEM;
+    }
+
+    /**
      * Returns the value of this KV object.
      *
      * @return The value of the KV object, may be {@code null}.

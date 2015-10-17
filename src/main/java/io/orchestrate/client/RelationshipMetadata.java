@@ -16,49 +16,49 @@
 package io.orchestrate.client;
 
 /**
- * A container for metadata about a graph Relation object.
+ * A container for metadata about a graph Relationship object.
  */
-public interface RelationMetadata {
+public interface RelationshipMetadata {
 
     /**
-     * Returns the source collection for this relation.
+     * Returns the source collection for this relationship.
      *
-     * @return The source collection for this relation.
+     * @return The source collection for this relationship.
      */
     String getSourceCollection();
 
     /**
-     * Returns the source key for this relation.
+     * Returns the source key for this relationship.
      *
-     * @return The source key for this relation.
+     * @return The source key for this relationship.
      */
     String getSourceKey();
 
     /**
-     * Returns the source collection for this relation.
+     * Returns the source collection for this relationship.
      *
-     * @return The source collection for this relation.
+     * @return The source collection for this relationship.
      */
     String getDestinationCollection();
 
     /**
-     * Returns the destination key for this relation.
+     * Returns the destination key for this relationship.
      *
-     * @return The destination key for this relation.
+     * @return The destination key for this relationship.
      */
     String getDestinationKey();
 
     /**
-     * Returns the kind for this relation.
+     * Returns the relation label for this relationship.
      *
-     * @return The kind for this relation.
+     * @return The relation label for this relationship.
      */
-    String getKind();
+    String getRelation();
 
     /**
-     * Returns the reference (i.e. "version") of this relation.
+     * Returns the reference (i.e. "version") of this relationship.
      *
-     * @return The reference for this relation.
+     * @return The reference for this relationship.
      */
     String getRef();
 }

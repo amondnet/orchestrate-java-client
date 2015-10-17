@@ -36,17 +36,17 @@ import lombok.NonNull;
 import static io.orchestrate.client.Preconditions.*;
 
 /**
- * The resource for the relation features in the Orchestrate API.
+ * The resource for the relationship features in the Orchestrate API.
  */
-public class RelationResource extends BaseResource {
+public class RelationshipResource extends BaseResource {
 
     /** The collection containing the source key. */
     private String sourceCollection;
-    /** The source key to add the relation to. */
+    /** The source key to add the relationship to. */
     private String sourceKey;
     /** The collection containing the destination key. */
     private String destCollection;
-    /** The destination key to add the relation to. */
+    /** The destination key to add the relationship to. */
     private String destKey;
     /** Whether to store the object if no key already exists. */
     private boolean ifAbsent;
@@ -59,7 +59,7 @@ public class RelationResource extends BaseResource {
     /** The offset to start graph results at. */
     private int offset;
 
-    RelationResource(final OrchestrateClient client,
+    RelationshipResource(final OrchestrateClient client,
             final JacksonMapper mapper,
             final String sourceCollection,
             final String sourceKey) {
@@ -78,20 +78,20 @@ public class RelationResource extends BaseResource {
     /**
      * Equivalent to {@code this.ifAbsent(Boolean.TRUE)}.
      *
-     * @return This RelationResource.
+     * @return This RelationshipResource.
      * @see #ifAbsent(boolean)
      */
-    public RelationResource ifAbsent() {
+    public RelationshipResource ifAbsent() {
         return ifAbsent(Boolean.TRUE);
     }
 
     /**
-     * Whether to store the object if no such relation already exists.
+     * Whether to store the object if no such relationship already exists.
      *
      * @param ifAbsent If {@code true}
-     * @return This RelationResource.
+     * @return This RelationshipResource.
      */
-    public RelationResource ifAbsent(final boolean ifAbsent) {
+    public RelationshipResource ifAbsent(final boolean ifAbsent) {
         checkArgument(!ifAbsent || objectRef == null, "'ifMatch' and 'ifAbsent' cannot be used together.");
 
         this.ifAbsent = ifAbsent;
@@ -103,9 +103,9 @@ public class RelationResource extends BaseResource {
      * succeed.
      *
      * @param objectRef The last known version of the stored object.
-     * @return This RelationResource.
+     * @return This RelationshipResource.
      */
-    public RelationResource ifMatch(final @NonNull String objectRef) {
+    public RelationshipResource ifMatch(final @NonNull String objectRef) {
         checkArgument(!ifAbsent, "'ifMatch' and 'ifAbsent' cannot be used together.");
 
         this.objectRef = objectRef;
@@ -113,30 +113,30 @@ public class RelationResource extends BaseResource {
     }
 
     /**
-     * Retrieve a Relation object.
+     * Retrieve a Relationship object.
      *
      * <p>Usage:</p>
      * <pre>
      * {@code
-     * Relation relation =
-     *         client.relation("someCollection", "someKey")
-     *               .get("someKind", "otherCollection", "otherKey")
+     * Relationship relationship =
+     *         client.relationship("someCollection", "someKey")
+     *               .get("someRelation", "otherCollection", "otherKey")
      *               .get();
      * }
      * </pre>
      *
-     * @param kind String The name of the relationship.
+     * @param relation String The name of the relationship.
      * @param destCollection String The name of destination collection.
      * @param destKey String The name of destination key.
      * @return A prepared get request.
      */
-    public OrchestrateRequest<Relation> get(final String kind, final String destCollection, final String destKey) {
+    public <T> OrchestrateRequest<Relationship<T>> get(final Class<T> clazz, final String relation, final String destCollection, final String destKey) {
 
-        checkNotNullOrEmpty(kind, "kind");
+        checkNotNullOrEmpty(relation, "relation");
         checkNotNullOrEmpty(destCollection, "destCollection");
         checkNotNullOrEmpty(destKey, "destKey");
 
-        final String uri = client.uri(sourceCollection, sourceKey, "relation", kind, destCollection, destKey);
+        final String uri = client.uri(sourceCollection, sourceKey, "relation", relation, destCollection, destKey);
 
         final HttpContent packet = HttpRequestPacket.builder()
                 .method(Method.GET)
@@ -145,9 +145,9 @@ public class RelationResource extends BaseResource {
                 .httpContentBuilder()
                 .build();
 
-        return new OrchestrateRequest<Relation>(client, packet, new ResponseConverter<Relation>() {
+        return new OrchestrateRequest<Relationship<T>>(client, packet, new ResponseConverter<Relationship<T>>() {
             @Override
-            public Relation from(final HttpContent response) throws IOException {
+            public Relationship<T> from(final HttpContent response) throws IOException {
                 final HttpHeader header = response.getHttpHeader();
                 final int status = ((HttpResponsePacket) header).getStatus();
                 assert (status == 200 || status == 404);
@@ -159,12 +159,24 @@ public class RelationResource extends BaseResource {
                 final String ref = header.getHeader(Header.ETag)
                         .replace("\"", "")
                         .replace("-gzip", "");
-                JsonNode value = toJsonNodeOrNull(response);
 
-                return new Relation(
+                JsonNode valueNode = toJsonNodeOrNull(response);
+
+                final T value = ResponseConverterUtil.jsonToDomainObject(mapper, valueNode, clazz);
+                String rawValue = null;
+                if(value != null && value instanceof String) {
+                    rawValue = (String)value;
+                }
+
+                // The server doesn't send reftime on graph relationship GET
+                Long reftime = null;
+
+                return new Relationship<T>(
+                    mapper,
                     sourceCollection, sourceKey,
-                    destCollection, destKey, kind,
-                    ref, value
+                    relation, destCollection, destKey,
+                    ref, reftime,
+                    value, valueNode, rawValue
                 );
             }
         });
@@ -177,26 +189,26 @@ public class RelationResource extends BaseResource {
      * <pre>
      * {@code
      * RelationList<String> relatedObjects =
-     *         client.relation("someCollection", "someKey")
-     *               .get(String.class, "someKind")
+     *         client.relationship("someCollection", "someKey")
+     *               .get(String.class, "someRelation")
      *               .get();
      * }
      * </pre>
      *
      * @param clazz Type information for deserializing to type {@code T} at
      *              runtime.
-     * @param kinds The name of the relationships to traverse to the related
+     * @param relations The name of the relationships to traverse to the related
      *              objects.
      * @param <T> The type to deserialize the response from the request to.
      * @return A prepared get request.
      */
-    public <T> OrchestrateRequest<RelationList<T>> get(final Class<T> clazz, final String... kinds) {
+    public <T> OrchestrateRequest<RelationshipList<T>> get(final Class<T> clazz, final String... relations) {
         checkNotNull(clazz, "clazz");
         checkArgument(destCollection == null && destKey == null,
                 "'destCollection' and 'destKey' not valid in GET query.");
-        checkNoneEmpty(kinds, "kinds", "kind");
+        checkNoneEmpty(relations, "relations", "relation");
 
-        final String uri = client.uri(sourceCollection, sourceKey, "relations").concat("/" + client.encode(kinds));
+        final String uri = client.uri(sourceCollection, sourceKey, "relations").concat("/" + client.encode(relations));
 
         final String query = "limit=".concat(limit + "")
                 .concat("&offset=").concat(offset + "");
@@ -209,9 +221,9 @@ public class RelationResource extends BaseResource {
                 .httpContentBuilder()
                 .build();
 
-        return new OrchestrateRequest<RelationList<T>>(client, packet, new ResponseConverter<RelationList<T>>() {
+        return new OrchestrateRequest<RelationshipList<T>>(client, packet, new ResponseConverter<RelationshipList<T>>() {
             @Override
-            public RelationList<T> from(final HttpContent response) throws IOException {
+            public RelationshipList<T> from(final HttpContent response) throws IOException {
                 final int status = ((HttpResponsePacket) response.getHttpHeader()).getStatus();
                 assert (status == 200 || status == 404);
 
@@ -221,7 +233,21 @@ public class RelationResource extends BaseResource {
 
                 final JsonNode jsonNode = toJsonNode(response);
 
-                final OrchestrateRequest<RelationList<T>> next = parseLink("next", jsonNode, this);
+                OrchestrateRequest<RelationshipList<T>> next = parseLink("next", jsonNode, this);
+                if (jsonNode.has("next")) {
+                    final String page = jsonNode.get("next").asText();
+                    final URI url = URI.create(page);
+                    final HttpContent packet = HttpRequestPacket.builder()
+                            .method(Method.GET)
+                            .uri(uri)
+                            .query(url.getQuery())
+                            .build()
+                            .httpContentBuilder()
+                            .build();
+                    next = new OrchestrateRequest<RelationshipList<T>>(client, packet, this, false);
+                } else {
+                    next = null;
+                }
 
                 final int count = jsonNode.path("count").asInt();
                 final List<KvObject<T>> relatedObjects = new ArrayList<KvObject<T>>(count);
@@ -230,7 +256,7 @@ public class RelationResource extends BaseResource {
                     relatedObjects.add(toKvObject(node, clazz));
                 }
 
-                return new RelationList<T>(relatedObjects, next);
+                return new RelationshipList<T>(relatedObjects, next);
             }
         });
     }
@@ -242,18 +268,18 @@ public class RelationResource extends BaseResource {
      * <pre>
      * {@code
      * boolean result =
-     *         client.relation("someCollection", "someKey")
+     *         client.relationship("someCollection", "someKey")
      *               .to("anotherCollection", "anotherKey")
-     *               .put(kind)
+     *               .put(relation)
      *               .get();
      * }
      * </pre>
      *
-     * @param kind The name of the relationship to create.
+     * @param relation The name of the relationship to create.
      * @return A prepared put request.
      */
-    public OrchestrateRequest<Boolean> put(final String kind) {
-        HttpContent packet = prepareCreateRelation(kind, null);
+    public OrchestrateRequest<Boolean> put(final String relation) {
+        HttpContent packet = prepareCreateRelationship(relation, null);
         return new OrchestrateRequest<Boolean>(client, packet, new ResponseConverter<Boolean>() {
             @Override
             public Boolean from(final HttpContent response) throws IOException {
@@ -274,22 +300,22 @@ public class RelationResource extends BaseResource {
      * {@code
      * JsonNode properties = new ObjectMapper().readTree("{ \"foo\" : \"bar\" }");
      * RelationMetadata result =
-     *         client.relation("someCollection", "someKey")
+     *         client.relationship("someCollection", "someKey")
      *               .to("anotherCollection", "anotherKey")
-     *               .put(kind, properties)
+     *               .put(relation, properties)
      *               .get();
      * }
      * </pre>
      *
-     * @param kind The name of the relationship to create.
+     * @param relation The name of the relationship to create.
      * @param properties A json object representing the properties of this relationship.
      * @return A prepared create request.
      */
-    public OrchestrateRequest<RelationMetadata> put(final String kind, final JsonNode properties) {
-        HttpContent packet = prepareCreateRelation(kind, properties);
-        return new OrchestrateRequest<RelationMetadata>(client, packet, new ResponseConverter<RelationMetadata>() {
+    public OrchestrateRequest<RelationshipMetadata> put(final String relation, final @NonNull Object properties) {
+        HttpContent packet = prepareCreateRelationship(relation, properties);
+        return new OrchestrateRequest<RelationshipMetadata>(client, packet, new ResponseConverter<RelationshipMetadata>() {
             @Override
-            public RelationMetadata from(final HttpContent response) throws IOException {
+            public RelationshipMetadata from(final HttpContent response) throws IOException {
                 final HttpHeader header = response.getHttpHeader();
                 final int status = ((HttpResponsePacket) header).getStatus();
 
@@ -297,10 +323,17 @@ public class RelationResource extends BaseResource {
                     final String ref = header.getHeader(Header.ETag)
                             .replace("\"", "")
                             .replace("-gzip", "");
-                    return new Relation(
+
+                    // The server doesn't send reftime on graph relationship PUT
+                    Long reftime = null;
+
+                    return new Relationship<Object>(
+                        mapper,
                         sourceCollection, sourceKey,
+                        relation,
                         destCollection, destKey,
-                        kind, ref, properties
+                        ref, reftime,
+                        (Object) null, (JsonNode) null, (String) null
                     );
                 }
                 return null;
@@ -308,9 +341,9 @@ public class RelationResource extends BaseResource {
         });
     }
 
-    private HttpContent prepareCreateRelation(final String kind, final JsonNode properties) {
+    private HttpContent prepareCreateRelationship(final String relation, final @NonNull Object properties) {
 
-        checkNotNullOrEmpty(kind, "kind");
+        checkNotNullOrEmpty(relation, "relation");
         checkArgument(destCollection != null && destKey != null,
                 "'destCollection' and 'destKey' required for PUT query.");
 
@@ -320,7 +353,7 @@ public class RelationResource extends BaseResource {
         String localDestKey = invert ? sourceKey : destKey;
 
         final String uri = client.uri(
-                localSourceCollection, localSourceKey, "relation", kind,
+                localSourceCollection, localSourceKey, "relation", relation,
                 localDestCollection, localDestKey);
 
         HttpRequestPacket.Builder requestBuilder = HttpRequestPacket.builder()
@@ -357,18 +390,18 @@ public class RelationResource extends BaseResource {
      * <pre>
      * {@code
      * boolean result =
-     *         client.relation("someCollection", "someKey")
+     *         client.relationship("someCollection", "someKey")
      *               .to("anotherCollection", "anotherKey")
-     *               .purge(kind)
+     *               .purge(relation)
      *               .get();
      * }
      * </pre>
      *
-     * @param kind The name of the relationship to delete.
+     * @param relation The name of the relationship to delete.
      * @return A prepared delete request.
      */
-    public OrchestrateRequest<Boolean> purge(final String kind) {
-        checkNotNullOrEmpty(kind, "kind");
+    public OrchestrateRequest<Boolean> purge(final String relation) {
+        checkNotNullOrEmpty(relation, "relation");
         checkArgument(destCollection != null && destKey != null,
                 "'destCollection' and 'destKey' required for DELETE query.");
 
@@ -378,7 +411,7 @@ public class RelationResource extends BaseResource {
         String localDestKey = invert ? sourceKey : destKey;
 
         final String uri = client.uri(
-                localSourceCollection, localSourceKey, "relation", kind,
+                localSourceCollection, localSourceKey, "relation", relation,
                 localDestCollection, localDestKey);
 
         final HttpContent packet = HttpRequestPacket.builder()
@@ -402,10 +435,10 @@ public class RelationResource extends BaseResource {
      * The "destination" object to point the relationship to.
      *
      * @param collection The collection containing the destination key.
-     * @param key The destination key to add the relation to.
-     * @return This relation resource.
+     * @param key The destination key to add the relationship to.
+     * @return This relationship resource.
      */
-    public RelationResource to(
+    public RelationshipResource to(
             final String collection, final String key) {
         this.destCollection = checkNotNullOrEmpty(collection, "collection");
         this.destKey = checkNotNullOrEmpty(key, "key");
@@ -422,10 +455,10 @@ public class RelationResource extends BaseResource {
      * }
      * </pre>
      *
-     * @return This relation resource.
+     * @return This relationship resource.
      * @see #invert(boolean)
      */
-    public RelationResource invert() {
+    public RelationshipResource invert() {
         return invert(Boolean.TRUE);
     }
 
@@ -435,22 +468,22 @@ public class RelationResource extends BaseResource {
      * bi-directional relationship.
      *
      * @param invert Whether to invert the request.
-     * @return This relation resource.
+     * @return This relationship resource.
      */
-    public RelationResource invert(final boolean invert) {
+    public RelationshipResource invert(final boolean invert) {
         this.invert = invert;
         return this;
     }
 
     /**
-     * The number of relation results to get in this query, this value cannot
+     * The number of relationship results to get in this query, this value cannot
      * exceed 100. This property is ignored in {@code #put(...)} and {@code
      * #purge(...)} requests.
      *
      * @param limit The number of search results in this query.
      * @return This request.
      */
-    public RelationResource limit(final int limit) {
+    public RelationshipResource limit(final int limit) {
         this.limit = checkNotNegative(limit, "limit");
         return this;
     }
@@ -463,7 +496,7 @@ public class RelationResource extends BaseResource {
      * @param offset The position to start retrieving results from.
      * @return This request.
      */
-    public RelationResource offset(final int offset) {
+    public RelationshipResource offset(final int offset) {
         this.offset = checkNotNegative(offset, "offset");
         return this;
     }

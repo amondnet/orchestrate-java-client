@@ -776,10 +776,79 @@ for (Result<User> result : results) {
 }
 ```
 
+#### <a name="cross-collection-search"></a> [Cross-Collection Search](#cross-collection-search)
+
+You can search across all the collections in your application simultaneously, by calling the `search` method (instead of `searchCollection`, shown in the examples above). The results of your query will include any object matching
+your lucene query, regardless of the collection that contains them.
+
+```java
+String luceneQuery = "*";
+SearchResults<Void> results =
+        client.search()
+              .get(Void.class, luceneQuery)
+              .get();
+
+for (Result<Void> result : results) {
+    // do something with the search results
+    KvObject<Void> result = result.getKvObject();
+}
+```
+
+You can optionally filter your search results to only specific collections, by including a `@path.collection` clause in your query naming the collections to include:
+
+```java
+String luceneQuery = "@path.collection:(`users` `messages`)";
+SearchResults<Void> results =
+        client.search()
+              .get(Void.class, luceneQuery)
+              .get();
+
+for (Result<Void> result : results) {
+    // do something with the search results
+    KvObject<Void> result = result.getKvObject();
+    // Assuming our two collections ("users" and "messages") map
+    // to the java classes User and Message, respectively...
+    if ("users".equals(result.getCollection())) {
+      User user = result.getValue(User.class);
+    } else if ("messages".equals(result.getCollection())) {
+      Message message = result.getValue(Message.class);
+    }
+}
+```
+
+Or you can use the `.collections` convenience method to achieve the same result:
+
+```java
+String luceneQuery = "*";
+SearchResults<Void> results =
+        client.search()
+              .collections("users", "messages")
+              .get(Void.class, luceneQuery)
+              .get();
+
+for (Result<Void> result : results) {
+    // do something with the search results
+    KvObject<Void> result = result.getKvObject();
+    // Assuming our two collections ("users" and "messages") map
+    // to the java classes User and Message, respectively...
+    if ("users".equals(result.getCollection())) {
+      User user = result.getValue(User.class);
+    } else if ("messages".equals(result.getCollection())) {
+      Message message = result.getValue(Message.class);
+    }
+}
+```
+
+
 #### <a name="query-note"></a> [Note](#query-note)
 By default, the search functionality will only search Kv Items. To search events, you must
-specify a `path metadata` predicate: `@path.kind:event`. See [Search Events](#search-events)
-for more on searching for events.
+specify a `path metadata` predicate: `@path.kind:event`. Likewise, to search graph
+relationships, you must specify a `@path.kind:relationship` predicate in your query. You can
+search for multiple different object kinds simultaneously by including multiple different
+kinds in your query clause, like this: `@path.kind:(item event relationship)`.
+
+See [Search Events](#search-events) for more on searching for events or [Search Relationships](#search-relationships)
+for more info on searching graph relationships.
 
 #### <a name="query-note"></a> [Note](#query-note)
 
@@ -787,7 +856,8 @@ Search results are currently limited to no more than __100__ results for each
  query, if this limit is not suitable for you please let us know.
 
 By default, a search operation will only return up to __10__ results, use the
- `CollectionSearchResource` as shown above to retrieve more results for a query.
+ `CollectionSearchResource` or `CrossCollectionSearchResource` as shown above to
+ retrieve more results for a query.
 
 #### <a name="query-examples"></a> [Some Example Queries](#query-examples)
 
@@ -1075,7 +1145,7 @@ There is a convenience method to set the 'kind' metadata predicate for you:
 String luceneQuery = "@path.type:activities AND description:website";
 SearchResults<LogItem> results =
         client.searchCollection("users")
-              .kinds("event")
+              .kinds(ItemKind.EVENT)
               .get(LogItem.class, luceneQuery)
               .get();
 // same as above
@@ -1089,7 +1159,7 @@ recent first.
 String luceneQuery = "@path.type:activities AND description:website";
 SearchResults<LogItem> results =
         client.searchCollection("users")
-              .kinds("event")
+              .kinds(ItemKind.EVENT)
               .sort("@path.timestamp:desc")
               .get(LogItem.class, luceneQuery)
               .get();
@@ -1114,7 +1184,7 @@ the different event types will likely map to different Java Objects.
 String luceneQuery = "description:website";
 SearchResults<Void> results =
         client.searchCollection("users")
-              .kinds("event")
+              .kinds(ItemKind.EVENT)
               .get(luceneQuery)
               .get();
 for(Result<Void> result: results) {
@@ -1151,7 +1221,7 @@ You can also perform a search for KV Items AND Events.
 String luceneQuery = "description:website";
 SearchResults<Void> results =
         client.searchCollection("users")
-              .kinds("item", "event")
+              .kinds(ItemKind.ITEM, ItemKind.EVENT)
               .get(luceneQuery)
               .get();
 for(Result<Void> result: results) {
@@ -1461,20 +1531,20 @@ While building an application it's possible that you'll want to make association
 
 It's this sort of data problem that makes the graph features in Orchestrate
  shine, if you're building a socially-aware application you might want to
- add relations between data like "friend" or "follows".
+ add relationships between data like "friend" or "follows".
 
 A graph query is the right choice when you have a starting object that you want
  search from to follow relevant relationships and accumulate interesting
  information.
 
-### <a name="fetch-relations"></a> [Fetch Relations](#fetch-relations)
+### <a name="fetch-relationships"></a> [Fetch Relationships](#fetch-relationships)
 
 To fetch objects related to the `key` in the `collection` based on a
  relationship or number of `relation`s.
 
 ```java
 Iterable<KvObject<User>> results =
-        client.relation("users", "test@test.com")
+        client.relationship("users", "test@test.com")
               // here we say the related object result should be mapped as a User
               .get(User.class, "friend")
               .get();
@@ -1492,62 +1562,62 @@ Imagine that we'd like to know the `follow`ers of `users` that are `friend`s of
 
 ```java
 Iterable<KvObject<User>> results =
-        client.relation("users", "test@test.com")
+        client.relationship("users", "test@test.com")
               .get(User.class, "friend", "follow")
               .get();
 
 // same as above
 ```
 
-### <a name="store-relation"></a> [Store Relation](#store-relation)
+### <a name="store-relationship"></a> [Store Relationship](#store-relationship)
 
-To store a `relation` between one `key` to another `key` within the same
+To store a `relationship` between one `key` to another `key` within the same
  `collection` or across different `collection`s.
 
 ```java
 boolean result =
-        client.relation("sourceCollection", "sourceKey")
+        client.relationship("sourceCollection", "sourceKey")
               .to("destCollection", "destKey")
-              .put("someKind")
+              .put("someRelation")
               .get();
 
 if (result) {
-    System.out.println("Successfully stored the relation.");
+    System.out.println("Successfully stored the relationship.");
 }
 ```
 
 #### <a name="graph-note"></a> [Note](#graph-note)
 
 Relationships in Orchestrate are uni-directional, to define a bi-directional
- relation you must swap the `collection` <-> `toCollection` and `key` <-> `toKey`
+ relationship you must swap the `collection` <-> `toCollection` and `key` <-> `toKey`
  parameters.
 
 We may lift this restriction in a future release of the client.
 
-### <a name="store-relation-with-properties"></a> [Store Relation with Properties](#store-relation-with-properties)
+### <a name="store-relationship-with-properties"></a> [Store Relationship with Properties](#store-relationship-with-properties)
 
-A relation can optionally include a JSON object, representing the properties
+A relationship can optionally include a JSON object, representing the properties
  of the relationship itself (rather than the properties of the endpoint items).
 
-To store a `relation` between two items, with JSON properties:
+To store a `relationship` between two items, with JSON properties:
 
 ```java
 JsonNode properties = new ObjectMapper().readTree("{ \"foo\" : \"bar\" }");
-RelationMetadata result =
-        client.relation("sourceCollection", "sourceKey")
+RelationshipMetadata result =
+        client.relationship("sourceCollection", "sourceKey")
               .to("destCollection", "destKey")
-              .put("someKind", properties)
+              .put("someRelation", properties)
               .get();
 
 if (result != null) {
-    System.out.println("Successfully stored the relation");
+    System.out.println("Successfully stored the relationship");
 }
 ```
 
-#### <a name="relation-conditional-store"></a> [Relation Conditional Store](#relation-conditional-store)
+#### <a name="relationship-conditional-store"></a> [Relationship Conditional Store](#relationship-conditional-store)
 
-The `RelationMetadata` object returned by the `RelationResource.put()` method includes a `ref`
-string, which can be used to conditinally update the relation properties on a subsequent invocation.
+The `RelationshipMetadata` object returned by the `RelationshipResource.put()` method includes a `ref`
+string, which can be used to conditinally update the relationship properties on a subsequent invocation.
 
 ```java
 // update 'friend' relationship if the latest version 'ref' on the server matches
@@ -1555,29 +1625,29 @@ string, which can be used to conditinally update the relation properties on a su
 String lastRef = "a7d0ba2036de8b02"; // likely kept from an earlier operation
 JsonNode newProperties = new ObjectMapper().readTree("{ \"foo\" : \"bar\" }");
 try {
-    RelationMetadata friendship =
-        client.relation("users", "test1@test.com")
+    RelationshipMetadata friendship =
+        client.relationship("users", "test1@test.com")
               .to("users", "test2@test.com")
               .ifMatch(lastRef)
               .put("friend", newProperties)
               .get();
 } catch (ItemVersionMismatchException ex) {
    // update failed because the refs do not match. This would usually
-   // mean the relation was updated since we last read it.
+   // mean the relationship was updated since we last read it.
 }
 
 ```
 
-You may also want to be sure you are inserting a NEW Relation, and not unintentionally
-updating a Relation that was already written, with the sime kind, and for the same two items.
+You may also want to be sure you are inserting a NEW Relationship, and not unintentionally
+updating a Relationship that was already written, with the same relation, and for the same two items.
 
 ```
 // store the new 'friend' data if the key 'test1@test.com' does not
 // already have a 'friend' relation with the key 'test2@test.com'
 JsonNode properties = new ObjectMapper().readTree("{ \"foo\" : \"bar\" }");
 try {
-    RelationMetadata friendship =
-        client.relation("users", "test1@test.com")
+    RelationshipMetadata friendship =
+        client.relationship("users", "test1@test.com")
               .to("users", "test2@test.com")
               .ifAbsent()
               .put("friend", properties)
@@ -1591,21 +1661,64 @@ These "conditional store" operations are very useful in high write concurrency
  environments. They provide a pre-condition that must be `true` for the store
  operation to succeed.
 
-### <a name="purge-relation"></a> [Purge Relation](#purge-relation)
+### <a name="purge-relationship"></a> [Purge Relationship](#purge-relationship)
 
-To purge a `relation` between one `key` to another `key` within the same
+To purge a `relationship` between one `key` to another `key` within the same
  `collection` or across different `collection`s.
 
 ```java
 boolean result =
-        client.relation("sourceCollection", "sourceKey")
+        client.relationship("sourceCollection", "sourceKey")
               .to("destCollection", "destKey")
-              .purge("someKind")
+              .purge("someRelation")
               .get();
 
 if (result) {
-    System.out.println("Successfully purged the relation.");
+    System.out.println("Successfully purged the relationship.");
 }
+```
+
+#### <a name="search-relationships"></a> [Search Relationships](#search-relationships)
+
+Relationships can be searched using the same Search api. To find relationships, the query must
+include the predicate for finding relationships: `@path.kind:relationship`. This `path metadata` predicate
+indicates we are only searching for `relationships` objects. This meta defaults to `item` so that
+ONLY items are returned unless `@path.kind` is specified explicitly.
+
+By specifying the `@path.kind:relationship` you are able to search for relationships across keys
+in a collection.
+
+```java
+// @path.kind:relationship will search only relationships, and
+// @path.relation:friend will search only 'friend' relationships
+String luceneQuery = "@path.kind:relationship AND @path.relation:friend AND value.closeness:acquaintence";
+SearchResults<Friendship> results =
+        client.searchCollection("users")
+              .get(Friendship.class, luceneQuery)
+              .get();
+for(Result<Friendship> result: results) {
+    Relationship<Friendship> relationship = result.getRelationshipObject();
+    String sourceKey = relationship.getSourceKey();
+    String destinationKey = relationship.getDestinationKey();
+    Friendship friendship = relationship.getValue();
+
+    System.out.println(String.format(
+      "Found relationship source:%s, destination:%s, description:%s",
+          sourceKey, destinationKey, friendship.getDescription()
+    ));
+}
+```
+
+There is a convenience method to set the 'kind' metadata predicate for you:
+
+```java
+String luceneQuery = "@path.relation:friend AND value.closeness:acquaintence";
+SearchResults<Friendship> results =
+        client.searchCollection("users")
+              .kinds(ItemKind.RELATIONSHIP)
+              .get(Friendship.class, luceneQuery)
+              .get();
+// same as above
 ```
 
 ## <a name="async-api"></a> [Asynchronous API](#async-api)

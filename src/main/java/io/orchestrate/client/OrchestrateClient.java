@@ -323,11 +323,17 @@ public class OrchestrateClient implements Client {
 
     /** {@inheritDoc} */
     @Override
-    public RelationResource relation(final String collection, final String key) {
+    public RelationshipResource relationship(final String collection, final String key) {
         checkNotNullOrEmpty(collection, "collection");
         checkNotNullOrEmpty(key, "key");
 
-        return new RelationResource(this, builder.mapper, collection, key);
+        return new RelationshipResource(this, builder.mapper, collection, key);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public CrossCollectionSearchResource search() {
+        return new CrossCollectionSearchResource(this, builder.mapper);
     }
 
     /** {@inheritDoc} */

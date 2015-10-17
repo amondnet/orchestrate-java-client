@@ -38,34 +38,34 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  * {@link io.orchestrate.client.OrchestrateClient}.
  */
 @RunWith(Theories.class)
-public final class RelationTest extends BaseClientTest {
+public final class RelationshipTest extends BaseClientTest {
 
     @Test
-    public void listRelation() {
+    public void listRelationships() {
         final Iterable<KvObject<String>> results =
-                client.relation(collection(), "key")
-                      .get(String.class, "kind")
+                client.relationship(collection(), "key")
+                      .get(String.class, "relation")
                       .get();
 
         assertNull(results);
     }
 
     @Theory
-    public void getRelation(@ForAll(sampleSize=10) final String kind) {
-        assumeThat(kind, not(isEmptyString()));
+    public void getRelationship(@ForAll(sampleSize=10) final String relation) {
+        assumeThat(relation, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
         final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final Boolean putResult =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                       .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-                      .put(kind)
+                      .put(relation)
                       .get();
 
-        final Relation getResult =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
-                      .get(kind, kvMetadata2.getCollection(), kvMetadata2.getKey())
+        final Relationship getResult =
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                      .get(String.class, relation, kvMetadata2.getCollection(), kvMetadata2.getKey())
                       .get();
 
         assertNotNull(kvMetadata1);
@@ -76,8 +76,8 @@ public final class RelationTest extends BaseClientTest {
     }
 
     @Theory
-    public void getRelationWithProperties(@ForAll(sampleSize=10) final String kind) {
-        assumeThat(kind, not(isEmptyString()));
+    public void getRelationshipWithProperties(@ForAll(sampleSize=10) final String relation) {
+        assumeThat(relation, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
         final KvMetadata kvMetadata2 = insertItem("key2", "{}");
@@ -85,15 +85,15 @@ public final class RelationTest extends BaseClientTest {
         final ObjectNode properties = MAPPER.createObjectNode();
         properties.put("foo", "bar");
 
-        final RelationMetadata putResult =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+        final RelationshipMetadata putResult =
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                       .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-                      .put(kind, properties)
+                      .put(relation, properties)
                       .get();
 
-        final Relation getResult =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
-                      .get(kind, kvMetadata2.getCollection(), kvMetadata2.getKey())
+        final Relationship<ObjectNode> getResult =
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                      .get(ObjectNode.class, relation, kvMetadata2.getCollection(), kvMetadata2.getKey())
                       .get();
 
         assertNotNull(kvMetadata1);
@@ -105,21 +105,21 @@ public final class RelationTest extends BaseClientTest {
     }
 
     @Theory
-    public void listRelations(@ForAll(sampleSize=10) final String kind) {
-        assumeThat(kind, not(isEmptyString()));
+    public void listRelationships(@ForAll(sampleSize=10) final String relation) {
+        assumeThat(relation, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
         final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final Boolean result =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                       .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-                      .put(kind)
+                      .put(relation)
                       .get();
 
         final Iterable<KvObject<String>> results =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
-                      .get(String.class, kind)
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                      .get(String.class, relation)
                       .get();
 
         assertNotNull(kvMetadata1);
@@ -136,30 +136,30 @@ public final class RelationTest extends BaseClientTest {
         assertEquals("{}", kvObject.getValue());
     }
 
-    public void listRelationAsync(@ForAll(sampleSize=10) final String kind)
+    public void listRelationshipsAsync(@ForAll(sampleSize=10) final String relation)
             throws InterruptedException {
-        assumeThat(kind, not(isEmptyString()));
+        assumeThat(relation, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
         final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final Boolean result =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                         .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-                        .put(kind)
+                        .put(relation)
                         .get();
 
         final BlockingQueue<Iterable> queue = DataStructures.getLTQInstance(Iterable.class);
-        client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
-              .get(String.class, kind)
-              .on(new ResponseAdapter<RelationList<String>>() {
+        client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+              .get(String.class, relation)
+              .on(new ResponseAdapter<RelationshipList<String>>() {
                   @Override
                   public void onFailure(final Throwable error) {
                       fail(error.getMessage());
                   }
 
                   @Override
-                  public void onSuccess(final RelationList<String> object) {
+                  public void onSuccess(final RelationshipList<String> object) {
                       queue.add(object);
                   }
               });
@@ -182,28 +182,28 @@ public final class RelationTest extends BaseClientTest {
     }
 
     @Theory
-    public void listRelationsMultiHop(@ForAll(sampleSize=10) final String kind) {
-        assumeThat(kind, not(isEmptyString()));
+    public void listRelationshipsMultiHop(@ForAll(sampleSize=10) final String relation) {
+        assumeThat(relation, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
         final KvMetadata kvMetadata2 = insertItem("key2", "{}");
         final KvMetadata kvMetadata3 = insertItem("key3", "{}");
 
         final Boolean result1 =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                         .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-                        .put(kind)
+                        .put(relation)
                         .get();
 
         final Boolean result2 =
-                client.relation(kvMetadata2.getCollection(), kvMetadata2.getKey())
+                client.relationship(kvMetadata2.getCollection(), kvMetadata2.getKey())
                       .to(kvMetadata3.getCollection(), kvMetadata3.getKey())
-                      .put(kind)
+                      .put(relation)
                       .get();
 
         final Iterable<KvObject<String>> results =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
-                        .get(String.class, kind, kind)
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                        .get(String.class, relation, relation)
                         .get();
 
         assertNotNull(kvMetadata1);
@@ -223,37 +223,37 @@ public final class RelationTest extends BaseClientTest {
     }
 
     @Theory
-    public void listRelationsMultiHopAsync(@ForAll(sampleSize=10) final String kind)
+    public void listRelationshipsMultiHopAsync(@ForAll(sampleSize=10) final String relation)
             throws InterruptedException {
-        assumeThat(kind, not(isEmptyString()));
+        assumeThat(relation, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
         final KvMetadata kvMetadata2 = insertItem("key2", "{}");
         final KvMetadata kvMetadata3 = insertItem("key3", "{}");
 
         final Boolean result1 =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                         .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-                        .put(kind)
+                        .put(relation)
                         .get();
 
         final Boolean result2 =
-                client.relation(kvMetadata2.getCollection(), kvMetadata2.getKey())
+                client.relationship(kvMetadata2.getCollection(), kvMetadata2.getKey())
                         .to(kvMetadata3.getCollection(), kvMetadata3.getKey())
-                        .put(kind)
+                        .put(relation)
                         .get();
 
         final BlockingQueue<Iterable> queue = DataStructures.getLTQInstance(Iterable.class);
-        client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
-              .get(String.class, kind, kind)
-              .on(new ResponseAdapter<RelationList<String>>() {
+        client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+              .get(String.class, relation, relation)
+              .on(new ResponseAdapter<RelationshipList<String>>() {
                   @Override
                   public void onFailure(final Throwable error) {
                       fail(error.getMessage());
                   }
 
                   @Override
-                  public void onSuccess(final RelationList<String> object) {
+                  public void onSuccess(final RelationshipList<String> object) {
                       queue.add(object);
                   }
               });
@@ -278,8 +278,8 @@ public final class RelationTest extends BaseClientTest {
     }
 
     @Theory
-    public void putRelationWithProperties(@ForAll(sampleSize=10) final String kind) {
-        assumeThat(kind, not(isEmptyString()));
+    public void putRelationshipWithProperties(@ForAll(sampleSize=10) final String relation) {
+        assumeThat(relation, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
         final KvMetadata kvMetadata2 = insertItem("key2", "{}");
@@ -287,10 +287,10 @@ public final class RelationTest extends BaseClientTest {
         final ObjectNode properties = MAPPER.createObjectNode();
         properties.put("foo", "bar");
 
-        final RelationMetadata result =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+        final RelationshipMetadata result =
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                       .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-                      .put(kind, properties)
+                      .put(relation, properties)
                       .get();
 
         assertNotNull(kvMetadata1);
@@ -300,16 +300,16 @@ public final class RelationTest extends BaseClientTest {
     }
 
     @Theory
-    public void putRelation(@ForAll(sampleSize=10) final String kind) {
-        assumeThat(kind, not(isEmptyString()));
+    public void putRelationship(@ForAll(sampleSize=10) final String relation) {
+        assumeThat(relation, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
         final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final Boolean result =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                       .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-                      .put(kind)
+                      .put(relation)
                       .get();
 
         assertNotNull(kvMetadata1);
@@ -318,17 +318,17 @@ public final class RelationTest extends BaseClientTest {
     }
 
     @Theory
-    public void putRelationAsync(@ForAll(sampleSize=10) final String kind)
+    public void putRelationshipAsync(@ForAll(sampleSize=10) final String relation)
             throws InterruptedException {
-        assumeThat(kind, not(isEmptyString()));
+        assumeThat(relation, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
         final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final BlockingQueue<Boolean> queue = DataStructures.getLTQInstance(Boolean.class);
-        client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+        client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
               .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-              .put(kind)
+              .put(relation)
               .on(new ResponseAdapter<Boolean>() {
                   @Override
                   public void onFailure(final Throwable error) {
@@ -349,27 +349,27 @@ public final class RelationTest extends BaseClientTest {
     }
 
     @Theory
-    public void purgeRelation(@ForAll(sampleSize=10) final String kind) {
-        assumeThat(kind, not(isEmptyString()));
+    public void purgeRelationship(@ForAll(sampleSize=10) final String relation) {
+        assumeThat(relation, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
         final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final Boolean store =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                       .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-                      .put(kind)
+                      .put(relation)
                       .get();
 
         final Boolean result =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                       .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-                      .purge(kind)
+                      .purge(relation)
                       .get();
 
         final Iterable<KvObject<String>> check =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
-                      .get(String.class, kind)
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                      .get(String.class, relation)
                       .get();
 
         assertNotNull(kvMetadata1);
@@ -380,23 +380,23 @@ public final class RelationTest extends BaseClientTest {
     }
 
     @Theory
-    public void purgeRelationAsync(@ForAll(sampleSize=10) final String kind)
+    public void purgeRelationshipAsync(@ForAll(sampleSize=10) final String relation)
             throws InterruptedException {
-        assumeThat(kind, not(isEmptyString()));
+        assumeThat(relation, not(isEmptyString()));
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
         final KvMetadata kvMetadata2 = insertItem("key2", "{}");
 
         final Boolean store =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                       .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-                      .put(kind)
+                      .put(relation)
                       .get();
 
         final BlockingQueue<Boolean> queue = DataStructures.getLTQInstance(Boolean.class);
-        client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+        client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
               .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-              .purge(kind)
+              .purge(relation)
               .on(new ResponseAdapter<Boolean>() {
                   @Override
                   public void onFailure(final Throwable error) {
@@ -413,8 +413,8 @@ public final class RelationTest extends BaseClientTest {
         final Boolean result = queue.poll(5000, TimeUnit.MILLISECONDS);
 
         final Iterable<KvObject<String>> check =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
-                        .get(String.class, kind)
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                        .get(String.class, relation)
                         .get();
 
         assertNotNull(kvMetadata1);
@@ -427,29 +427,29 @@ public final class RelationTest extends BaseClientTest {
     @Test
     public void getResultsAndPaginate() {
         final String collection = collection();
-        final String kind = "paginate";
+        final String relation = "paginate";
 
         final KvMetadata kvMetadata1 = insertItem("key1", "{}");
         final KvMetadata kvMetadata2 = insertItem("key2", "{}");
         final KvMetadata kvMetadata3 = insertItem("key3", "{}");
 
         final Boolean store1 =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                         .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
-                        .put(kind)
+                        .put(relation)
                         .get();
 
         final Boolean store2 =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                         .to(kvMetadata3.getCollection(), kvMetadata3.getKey())
-                        .put(kind)
+                        .put(relation)
                         .get();
 
-        final RelationList<String> results =
-                client.relation(kvMetadata1.getCollection(), kvMetadata1.getKey())
+        final RelationshipList<String> results =
+                client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
                         .limit(1)
                         .offset(0)
-                        .get(String.class, kind)
+                        .get(String.class, relation)
                         .get();
 
         System.out.println(results);
@@ -466,7 +466,7 @@ public final class RelationTest extends BaseClientTest {
         assertTrue(results.hasNext());
 
         assertFalse(results.getNext().hasSent());
-        final RelationList<String> results2 = results.getNext().get();
+        final RelationshipList<String> results2 = results.getNext().get();
         System.out.println(results2);
         assertNotNull(results2);
         assertTrue(results2.iterator().hasNext());
