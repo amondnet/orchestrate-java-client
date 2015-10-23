@@ -39,6 +39,8 @@ public class KvObject<T> implements KvMetadata {
     private final String key;
     /** The version for this metadata. */
     private final String ref;
+    /** The reftime for this metadata. May be null if not known (ie parsed from a create response Location uri). */
+    private final Long reftime;
 
     /** The value for this KV object. */
     private final T value;
@@ -46,7 +48,7 @@ public class KvObject<T> implements KvMetadata {
     private String rawValue;
     private JsonNode valueNode;
 
-    KvObject(final String collection, final String key, final String ref,
+    KvObject(final String collection, final String key, final String ref, final Long reftime,
              final ObjectMapper mapper, final T value,
              final JsonNode valueNode, final String rawValue) {
         assert (key != null);
@@ -57,6 +59,7 @@ public class KvObject<T> implements KvMetadata {
         this.collection = collection;
         this.key = key;
         this.ref = ref;
+        this.reftime = reftime;
 
         this.mapper = mapper;
         this.value = value;
@@ -143,5 +146,10 @@ public class KvObject<T> implements KvMetadata {
     @Override
     public String getRef() {
         return ref;
+    }
+
+    @Override
+    public Long getReftime() {
+        return reftime;
     }
 }

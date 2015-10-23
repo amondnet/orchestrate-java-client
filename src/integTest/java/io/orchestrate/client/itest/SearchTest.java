@@ -370,8 +370,12 @@ public final class SearchTest extends BaseClientTest {
         // to transform the results into a list:
         List<Result<User>> resultList = toList(results);
 
-        User user = resultList.get(0).getKvObject().getValue(User.class);
+        Result<User> userResult = resultList.get(0);
+        User user = userResult.getKvObject().getValue(User.class);
         assertTrue(user.getDescription().contains("test_1"));
+
+        Long reftime = userResult.getKvObject().getReftime();
+        assertTrue(reftime != null && reftime > 0);
     }
 
     @Test

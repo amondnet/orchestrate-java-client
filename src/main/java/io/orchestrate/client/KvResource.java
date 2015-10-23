@@ -261,7 +261,7 @@ public class KvResource extends BaseResource {
                     final String ref = header.getHeader(Header.ETag)
                             .replace("\"", "")
                             .replace("-gzip", "");
-                    return new KvObject<Void>(collection, key, ref, mapper, null, null, null);
+                    return new KvObject<Void>(collection, key, ref, null, mapper, null, null, null);
                 }
                 return null;
             }
@@ -299,7 +299,7 @@ public class KvResource extends BaseResource {
                     final String ref = header.getHeader(Header.ETag)
                             .replace("\"", "")
                             .replace("-gzip", "");
-                    return new KvObject<Void>(collection, key, ref, mapper, null, null, null);
+                    return new KvObject<Void>(collection, key, ref, null, mapper, null, null, null);
                 }
                 return null;
             }
@@ -337,7 +337,7 @@ public class KvResource extends BaseResource {
                     final String ref = header.getHeader(Header.ETag)
                             .replace("\"", "")
                             .replace("-gzip", "");
-                    return new KvObject<Void>(collection, key, ref, mapper, null, null, null);
+                    return new KvObject<Void>(collection, key, ref, null, mapper, null, null, null);
                 }
                 return null;
             }

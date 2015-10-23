@@ -15,9 +15,6 @@
  */
 package io.orchestrate.client;
 
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-
 /**
  * A container for metadata about a KV object.
  */
@@ -42,4 +39,13 @@ public interface KvMetadata {
      * @return The reference for this metadata.
      */
     String getRef();
+
+    /**
+     * Returns the reftime of this metadata. This may be null if reftime is not available (for example, if the
+     * KvMetadata is parsed from a Location header after a CREATE request where the refime is not presented). Reftime
+     * is only present on search results or object listing queries. It is NOT present on create responses or individual
+     * GET requests.
+     * @return The reftime for this metadata.
+     */
+    Long getReftime();
 }
