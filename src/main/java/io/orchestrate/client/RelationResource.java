@@ -221,21 +221,7 @@ public class RelationResource extends BaseResource {
 
                 final JsonNode jsonNode = toJsonNode(response);
 
-                final OrchestrateRequest<RelationList<T>> next;
-                if (jsonNode.has("next")) {
-                    final String page = jsonNode.get("next").asText();
-                    final URI url = URI.create(page);
-                    final HttpContent packet = HttpRequestPacket.builder()
-                            .method(Method.GET)
-                            .uri(uri)
-                            .query(url.getQuery())
-                            .build()
-                            .httpContentBuilder()
-                            .build();
-                    next = new OrchestrateRequest<RelationList<T>>(client, packet, this, false);
-                } else {
-                    next = null;
-                }
+                final OrchestrateRequest<RelationList<T>> next = parseLink("next", jsonNode, this);
 
                 final int count = jsonNode.path("count").asInt();
                 final List<KvObject<T>> relatedObjects = new ArrayList<KvObject<T>>(count);

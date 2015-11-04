@@ -96,7 +96,7 @@ abstract class BaseResource {
             final HttpContent packet = HttpRequestPacket.builder()
                     .method(Method.GET)
                     .uri(url.getPath())
-                    .query(url.getQuery())
+                    .query(url.getRawQuery())
                     .build()
                     .httpContentBuilder()
                     .build();
