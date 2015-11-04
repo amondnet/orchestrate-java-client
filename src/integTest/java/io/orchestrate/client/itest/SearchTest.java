@@ -122,6 +122,41 @@ public final class SearchTest extends BaseClientTest {
         assertEquals(Arrays.asList("key1", "key2"), keys(backToPage1));
     }
 
+    @Test
+    public void getSearchCollectionAndPaginateWithComplexQuery() throws InterruptedException {
+        for (int i=0;i<35;i++) {
+            insertItem("key_"+i, "{`num`: %d, `test`:`%s`}", i, "search_test");
+        }
+
+        OrchestrateRequest<SearchResults<String>> request = search()
+                .limit(2)
+                .offset(0)
+                .sort("key")
+                .get(String.class, "@path.kind:item AND test:search_test AND num:[20 TO 30]");
+
+        SearchResults<String> page = request.get();
+        Set<String> foundKeys = new HashSet<String>();
+
+        boolean donePaging = false;
+        while (!donePaging) {
+            for(Result<String> result : page) {
+                foundKeys.add(result.getKvObject().getKey());
+            }
+            if (page.hasNext()) {
+                page = page.getNext().get();
+            } else {
+                donePaging = true;
+            }
+        }
+
+        Set<String> expectedKeys = new HashSet<String>();
+        for (int i=20; i<=30; i++) {
+            expectedKeys.add("key_"+i);
+        }
+        assertEquals(expectedKeys.size(), foundKeys.size());
+        assertTrue(foundKeys.containsAll(expectedKeys));
+    }
+
     private List<String> keys(SearchResults<String> page) {
         List<String> keys = new ArrayList<String>();
         for(Result<String> result : page.getResults()) {
