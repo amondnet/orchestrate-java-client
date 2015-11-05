@@ -107,13 +107,20 @@ public interface Client {
     public OrchestrateRequest<KvMetadata> postValue(final String collection, final Object value) throws IOException;
 
     /**
-     * The resource for the relation features in the Orchestrate API.
+     * The resource for the relationship features in the Orchestrate API.
      *
      * @param collection The name of the collection.
      * @param key The name of the key.
-     * @return The relation resource.
+     * @return The relationship resource.
      */
-    public RelationResource relation(final String collection, final String key);
+    public RelationshipResource relationship(final String collection, final String key);
+
+    /**
+     * The resource for cross-collection search features in the Orchestrate API.
+     *
+     * @return The root search resource.
+     */
+    public CrossCollectionSearchResource search();
 
     /**
      * The resource for the collection search features in the Orchestrate API.

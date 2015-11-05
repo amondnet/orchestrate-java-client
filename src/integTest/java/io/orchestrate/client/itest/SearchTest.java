@@ -18,9 +18,7 @@ package io.orchestrate.client.itest;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.orchestrate.client.*;
 import org.glassfish.grizzly.utils.DataStructures;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.util.*;
@@ -28,7 +26,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 /**
  * {@link io.orchestrate.client.OrchestrateClient#searchCollection(String)}.
@@ -262,7 +259,7 @@ public final class SearchTest extends BaseClientTest {
         }
 
         final SearchResults<Void> results = search()
-                        .kinds("event")
+                        .kinds(ItemKind.EVENT)
                         .get("*")
                         .get();
 
@@ -343,7 +340,7 @@ public final class SearchTest extends BaseClientTest {
         }
         final SearchResults<Void> results = search()
                         .sort("@path.kind")  // this is so the event will come first.
-                        .kinds("item", "event")
+                        .kinds(ItemKind.ITEM, ItemKind.EVENT)
                         .get("val:`val_1`")
                         .get();
 

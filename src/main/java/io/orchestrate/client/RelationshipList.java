@@ -20,16 +20,16 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * A container for relation objects.
+ * A container for relationship objects.
  */
-public class RelationList<T> implements Iterable<KvObject<T>> {
+public class RelationshipList<T> implements Iterable<KvObject<T>> {
 
     private final List<KvObject<T>> relatedObjects;
 
     /** The next page of the results URL specified. */
-    private final OrchestrateRequest<RelationList<T>> next;
+    private final OrchestrateRequest<RelationshipList<T>> next;
 
-    RelationList(final List<KvObject<T>> relatedObjects, @Nullable final OrchestrateRequest<RelationList<T>> next) {
+    RelationshipList(final List<KvObject<T>> relatedObjects, @Nullable final OrchestrateRequest<RelationshipList<T>> next) {
         assert (relatedObjects != null);
 
         this.relatedObjects = relatedObjects;
@@ -51,7 +51,7 @@ public class RelationList<T> implements Iterable<KvObject<T>> {
      * @return The URL of the next page of KV objects.
      */
     @Nullable
-    public final OrchestrateRequest<RelationList<T>> getNext() {
+    public final OrchestrateRequest<RelationshipList<T>> getNext() {
         return next;
     }
 

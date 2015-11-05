@@ -36,12 +36,19 @@ final class ResponseConverterUtil {
         // parse the PATH structure (e.g.):
         // {"collection":"coll","key":"aKey","ref":"someRef"}
         final JsonNode path = jsonNode.get("path");
-        final String kind = path.get("kind").asText();
 
-        if ("event".equals(kind)) {
+        String kindText = path.get("kind").asText();
+        ItemKind kind = null;
+        try {
+            kind = ItemKind.fromJson(kindText);
+        } catch (Exception e) {
+            throw new IllegalStateException(String.format("Unknown kind '%s', cannot parse as a KvObject.", kindText));
+        }
+
+        if (kind.equals(ItemKind.EVENT)) {
             return wrapperJsonToEvent(mapper, jsonNode, clazz);
-        } else if (!"item".equals(kind)) {
-            throw new IllegalStateException(String.format("Unknown kind '%s', cannot parse as a KvObject.", kind));
+        } else if (kind.equals(ItemKind.RELATIONSHIP)) {
+            return wrapperJsonToRelationship(mapper, jsonNode, clazz);
         }
 
         final String collection = path.get("collection").asText();
@@ -83,7 +90,6 @@ final class ResponseConverterUtil {
         return new KvObject<T>(collection, key, ref, reftime, mapper, value, valueNode, rawValue);
     }
 
-    @SuppressWarnings("unchecked")
     public static <T> KvObject<T> jsonToKvObject(ObjectMapper mapper, String rawValue, Class<T> clazz,
                                                  String collection, String key, String ref) throws IOException {
         assert (mapper != null);
@@ -171,5 +177,38 @@ final class ResponseConverterUtil {
         }
 
         return new Event<T>(mapper, collection, key, eventType, timestamp, ordinal, ref, reftime, value, valueNode, rawValue);
+    }
+
+    public static <T> Relationship<T> wrapperJsonToRelationship(ObjectMapper mapper, JsonNode wrapperJson, Class<T> clazz) throws IOException {
+        assert (mapper != null);
+        assert (clazz != null);
+
+        final JsonNode path = wrapperJson.get("path");
+
+        final JsonNode source = path.get("source");
+        final String sourceCollection = source.get("collection").textValue();
+        final String sourceKey = source.get("key").textValue();
+
+        final String ref = path.get("ref").textValue();
+        final Long reftime;
+        if (path.has("reftime")) {
+            reftime = path.get("reftime").longValue();
+        } else {
+            reftime = null;
+        }
+
+        final String relation = path.get("relation").asText();
+        final JsonNode destination = path.get("destination");
+        final String destinationCollection = destination.get("collection").asText();
+        final String destinationKey = destination.get("key").asText();
+
+        final JsonNode valueNode = wrapperJson.get("value");
+
+        final T value = jsonToDomainObject(mapper, valueNode, clazz);
+        String rawValue = null;
+        if(value != null && value instanceof String) {
+            rawValue = (String)value;
+        }
+        return new Relationship<T>(mapper, sourceCollection, sourceKey, relation, destinationCollection, destinationKey, ref, reftime, value, valueNode, rawValue);
     }
 }
