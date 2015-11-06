@@ -1,4 +1,4 @@
-- 0.12.0
+- 0.12.0: 2015-11-06
  * Add support for cross-collection search
  * Allow graph relationships to appear in search results
  * (breaking) Rename "Relation" class to "Relationship", consistent with REST API naming conventions
@@ -6,7 +6,7 @@
  * (breaking) Graph "Relationship" class is now a subclass of KvObject
  * (breaking) Search by "kinds" now accepts ItemKind enum arguments, instead of string values. 
  * Parse path.reftime into the KvMetadata (and all descendants)
-- 0.11.1 2017-08-28
+- 0.11.1: 2015-08-28
  * Add support for JSON properties to graph relations
  * Add support for conditional PUT headers (if-match & if-none-match) to graph relations
  * Add support for prev/next in search queries.
