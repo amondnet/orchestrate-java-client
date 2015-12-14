@@ -118,6 +118,7 @@ The javadoc for the latest version of the client is available at:
 
 For older versions of the documentation:
 
+* [0.12.1](http://java.orchestrate.io/javadoc/0.12.1/)
 * [0.12.0](http://java.orchestrate.io/javadoc/0.12.0/)
 * [0.11.1](http://java.orchestrate.io/javadoc/0.11.1/)
 * [0.11.0](http://java.orchestrate.io/javadoc/0.11.0/)
