@@ -341,7 +341,7 @@ public class RelationshipResource extends BaseResource {
         });
     }
 
-    private HttpContent prepareCreateRelationship(final String relation, final @NonNull Object properties) {
+    private HttpContent prepareCreateRelationship(final String relation, final Object properties) {
 
         checkNotNullOrEmpty(relation, "relation");
         checkArgument(destCollection != null && destKey != null,
