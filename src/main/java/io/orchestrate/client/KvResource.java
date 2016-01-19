@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static io.orchestrate.client.Preconditions.checkArgument;
+import static io.orchestrate.client.Preconditions.checkNotNull;
 
 /**
  * The resource for the KV features in the Orchestrate API.
@@ -43,6 +44,10 @@ public class KvResource extends BaseResource {
     private String objectRef;
     /** Whether an update can act as an insert if the kv doesn't exist */
     private boolean upsert;
+    /** The fully-qualified names of fields to select when filtering the result JSON */
+    private String withFields;
+    /** The fully-qualified names of fields to reject when filtering the result JSON */
+    private String withoutFields;
 
     KvResource(final OrchestrateClient client,
                final JacksonMapper mapper,
@@ -58,6 +63,8 @@ public class KvResource extends BaseResource {
         this.key = key;
         this.ifAbsent = false;
         this.objectRef = null;
+        this.withFields = null;
+        this.withoutFields = null;
     }
 
     /**
@@ -169,10 +176,23 @@ public class KvResource extends BaseResource {
                 client.uri(collection, key, "refs", ref) :
                 client.uri(collection, key);
 
-        final HttpContent packet = HttpRequestPacket.builder()
+        String query = "";
+        if (withFields != null) {
+            query = query.concat("&with_fields=").concat(client.encode(withFields));
+        }
+        if (withoutFields != null) {
+            query = query.concat("&without_fields=").concat(client.encode(withoutFields));
+        }
+
+        final HttpRequestPacket.Builder packetBuilder = HttpRequestPacket.builder()
                 .method(Method.GET)
-                .uri(uri)
-                .build()
+                .uri(uri);
+
+        if (!query.isEmpty()) {
+            packetBuilder.query(query);
+        }
+
+        final HttpContent packet = packetBuilder.build()
                 .httpContentBuilder()
                 .build();
 
@@ -235,6 +255,50 @@ public class KvResource extends BaseResource {
         checkArgument(!ifAbsent, "'ifMatch' and 'ifAbsent' cannot be used together.");
 
         this.objectRef = objectRef;
+        return this;
+    }
+
+    /**
+     * Apply field-filtering to the result JSON, using this list of fully-qualified
+     * field names as a whitelist of fields to include.
+     *
+     * <p>
+     * {@code
+     * KvObject<DomainObject> object =
+     *         client.kv("someCollection", "someKey")
+     *               .withFields("value.name.first,value.name.last")
+     *               .get(DomainObject.class)
+     *               .get();
+     * }
+     * </p>
+     *
+     * @param withFields The comma separated list of fully-qualified field names to select.
+     * @return This request.
+     */
+    public KvResource withFields(final String withFields) {
+        this.withFields = checkNotNull(withFields, "withFields");
+        return this;
+    }
+
+    /**
+     * Apply field-filtering to the result JSON, using this list of fully-qualified
+     * field names as a blacklist of fields to exclude.
+     *
+     * <p>
+     * {@code
+     * KvObject<DomainObject> object =
+     *         client.kv("someCollection", "someKey")
+     *               .withoutFields("value.name.first,value.name.last")
+     *               .get(DomainObject.class)
+     *               .get();
+     * }
+     * </p>
+     *
+     * @param withoutFields The comma separated list of fully-qualified field names to reject.
+     * @return This request.
+     */
+    public KvResource withoutFields(final String withoutFields) {
+        this.withoutFields = checkNotNull(withoutFields, "withoutFields");
         return this;
     }
 

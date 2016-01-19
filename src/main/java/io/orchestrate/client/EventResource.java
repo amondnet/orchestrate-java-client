@@ -47,6 +47,10 @@ public class EventResource extends BaseResource {
     private Long end;
     /** The number of KV objects to retrieve. */
     private int limit;
+    /** The fully-qualified names of fields to select when filtering the result JSON */
+    private String withFields;
+    /** The fully-qualified names of fields to reject when filtering the result JSON */
+    private String withoutFields;
 
     private Long timestamp;
 
@@ -65,6 +69,8 @@ public class EventResource extends BaseResource {
         this.start = null;
         this.end = null;
         this.limit = 10;
+        this.withFields = null;
+        this.withoutFields = null;
     }
 
     /**
@@ -113,6 +119,12 @@ public class EventResource extends BaseResource {
         if (end != null) {
             query += "&end=" + end;
         }
+        if (withFields != null) {
+            query = query.concat("&with_fields=").concat(client.encode(withFields));
+        }
+        if (withoutFields != null) {
+            query = query.concat("&without_fields=").concat(client.encode(withoutFields));
+        }
         httpHeaderBuilder.query(query);
 
         final HttpContent packet = httpHeaderBuilder.build()
@@ -148,6 +160,7 @@ public class EventResource extends BaseResource {
      * @param value The value for the event.
      * @return The prepared put request.
      */
+    @Deprecated
     public OrchestrateRequest<Boolean> put(final @NonNull Object value) {
         // Does NOT refer to current 'timestamp' because that is not how legacy worked (pre-deprecation).
         return put(value, null);
@@ -174,6 +187,7 @@ public class EventResource extends BaseResource {
      * @deprecated Use {@link #create(Object)} for adding new events, and SingleEventResource's 'update'
      *  (via {@link #ordinal(String)}) for updating existing event instances.
      */
+    @Deprecated
     public OrchestrateRequest<Boolean> put(
             final @NonNull Object value, @Nullable final Long timestamp) {
         checkNotNull(type, "type");
@@ -341,7 +355,7 @@ public class EventResource extends BaseResource {
         checkNotNull(timestamp, "timestamp");
         checkNotNullOrEmpty(ordinal, "ordinal");
         return new SingleEventResource(client, jacksonMapper,
-                collection, key, type, timestamp, ordinal);
+                collection, key, type, timestamp, ordinal, withFields, withoutFields);
     }
 
     /**
@@ -363,6 +377,58 @@ public class EventResource extends BaseResource {
      */
     public EventResource end(final long end) {
         this.end = end;
+        return this;
+    }
+
+    /**
+     * Apply field-filtering to the result JSON, using this list of fully-qualified
+     * field names as a whitelist of fields to include.
+     *
+     * <p>
+     * {@code
+     * // fetches a single event instance
+     * Event&lt;String&gt; event =
+     *         client.event("someCollection", "someKey")
+     *               .type("someType")
+     *               .timestamp(someTimestamp)
+     *               .ordinal(someOrdinal)
+     *               .withFields("value.name.first,value.name.last")
+     *               .get(String.class)
+     *               .get();
+     * }
+     * </p>
+     *
+     * @param withFields The comma separated list of fully-qualified field names to select.
+     * @return This request.
+     */
+    public EventResource withFields(final String withFields) {
+        this.withFields = checkNotNull(withFields, "withFields");
+        return this;
+    }
+
+    /**
+     * Apply field-filtering to the result JSON, using this list of fully-qualified
+     * field names as a blacklist of fields to exclude.
+     *
+     * <p>
+     * {@code
+     * // fetches a single event instance
+     * Event&lt;String&gt; event =
+     *         client.event("someCollection", "someKey")
+     *               .type("someType")
+     *               .timestamp(someTimestamp)
+     *               .ordinal(someOrdinal)
+     *               .withoutFields("value.name.first,value.name.last")
+     *               .get(String.class)
+     *               .get();
+     * }
+     * </p>
+     *
+     * @param withoutFields The comma separated list of fully-qualified field names to reject.
+     * @return This request.
+     */
+    public EventResource withoutFields(final String withoutFields) {
+        this.withoutFields = checkNotNull(withoutFields, "withoutFields");
         return this;
     }
 

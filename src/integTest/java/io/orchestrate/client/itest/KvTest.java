@@ -15,6 +15,7 @@
  */
 package io.orchestrate.client.itest;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pholser.junit.quickcheck.ForAll;
 import io.orchestrate.client.*;
@@ -36,7 +37,6 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.Matchers.isEmptyString;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeThat;
 
 /**
@@ -145,6 +145,38 @@ public final class KvTest extends BaseClientTest {
         assertEquals(kvMetadata.getKey(), object.getKey());
         assertEquals(kvMetadata.getRef(), object.getRef());
         assertEquals("{}", object.getValue());
+    }
+
+    @Test
+    public void getItemAndApplyWhitelistFieldFiltering() throws InterruptedException, IOException {
+        String key = Long.toHexString(RAND.nextLong());
+        KvMetadata kvMetadata = insertItem(key, "{`foo`:`bar`,`bing`:`bong`,`zip`:`zap`}");
+
+        KvObject<JsonNode> object = client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
+                .withFields("value.foo")
+                .get(JsonNode.class)
+                .get();
+
+        JsonNode resultJson = object.getValue();
+        assertEquals("bar", resultJson.get("foo").asText());
+        assertFalse(resultJson.has("bing"));
+        assertFalse(resultJson.has("zip"));
+    }
+
+    @Test
+    public void getItemAndApplyBlacklistFieldFiltering() throws InterruptedException, IOException {
+        String key = Long.toHexString(RAND.nextLong());
+        KvMetadata kvMetadata = insertItem(key, "{`foo`:`bar`,`bing`:`bong`,`zip`:`zap`}");
+
+        KvObject<JsonNode> object = client.kv(kvMetadata.getCollection(), kvMetadata.getKey())
+                .withoutFields("value.foo")
+                .get(JsonNode.class)
+                .get();
+
+        JsonNode resultJson = object.getValue();
+        assertEquals("bong", resultJson.get("bing").asText());
+        assertEquals("zap", resultJson.get("zip").asText());
+        assertFalse(resultJson.has("foo"));
     }
 
     @Theory

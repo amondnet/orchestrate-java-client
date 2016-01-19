@@ -66,7 +66,7 @@ public final class AggregateTest extends BaseClientTest {
         assertCountedValueEquals(entries.get(0), "monkey", 4);
         assertCountedValueEquals(entries.get(1), 1.0, 3);
         assertCountedValueEquals(entries.get(2), null, 2);
-        assertCountedValueEquals(entries.get(3), false, 1);
+        assertCountedValueEquals(entries.get(3), true, 1);
     }
 
     @Test

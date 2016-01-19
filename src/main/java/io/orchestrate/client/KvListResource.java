@@ -30,6 +30,7 @@ import java.util.List;
 
 import static io.orchestrate.client.Preconditions.checkArgument;
 import static io.orchestrate.client.Preconditions.checkNotNegative;
+import static io.orchestrate.client.Preconditions.checkNotNull;
 import static io.orchestrate.client.Preconditions.checkNotNullOrEmpty;
 
 /**
@@ -51,6 +52,10 @@ public class KvListResource extends BaseResource {
     private int limit;
     /** Whether to retrieve the values for the list of objects. */
     private boolean withValues;
+    /** The fully-qualified names of fields to select when filtering the result JSON */
+    private String withFields;
+    /** The fully-qualified names of fields to reject when filtering the result JSON */
+    private String withoutFields;
 
     KvListResource(final OrchestrateClient client,
                    final JacksonMapper mapper,
@@ -64,6 +69,8 @@ public class KvListResource extends BaseResource {
         this.stopInclusive = false;
         this.limit = 10;
         this.withValues = true;
+        this.withFields = null;
+        this.withoutFields = null;
     }
 
     /**
@@ -104,6 +111,13 @@ public class KvListResource extends BaseResource {
             query = query
                     .concat('&' + keyName + '=')
                     .concat(client.encode(stopKey));
+        }
+
+        if (withFields != null) {
+            query = query.concat("&with_fields=").concat(client.encode(withFields));
+        }
+        if (withoutFields != null) {
+            query = query.concat("&without_fields=").concat(client.encode(withoutFields));
         }
 
         final HttpContent packet = HttpRequestPacket.builder()
@@ -149,6 +163,7 @@ public class KvListResource extends BaseResource {
      * @see #inclusive(boolean)
      * @deprecated Use startKey(String, boolean)
      */
+    @Deprecated
     public KvListResource inclusive() {
         return inclusive(Boolean.TRUE);
     }
@@ -161,6 +176,7 @@ public class KvListResource extends BaseResource {
      * @return The KV list resource.
      * @deprecated Use startKey(String, boolean)
      */
+    @Deprecated
     public KvListResource inclusive(final boolean inclusive) {
         this.startInclusive = inclusive;
 
@@ -243,6 +259,50 @@ public class KvListResource extends BaseResource {
      */
     public KvListResource withValues(final boolean withValues) {
         this.withValues = withValues;
+        return this;
+    }
+
+    /**
+     * Apply field-filtering to the result JSON, using this list of fully-qualified
+     * field names as a whitelist of fields to include.
+     *
+     * <p>
+     * {@code
+     * KvList<String> objects =
+     *         client.listCollection("someCollection")
+     *               .withFields("value.name.first,value.name.last")
+     *               .get(String.class)
+     *               .get();
+     * }
+     * </p>
+     *
+     * @param withFields The comma separated list of fully-qualified field names to select.
+     * @return This request.
+     */
+    public KvListResource withFields(final String withFields) {
+        this.withFields = checkNotNull(withFields, "withFields");
+        return this;
+    }
+
+    /**
+     * Apply field-filtering to the result JSON, using this list of fully-qualified
+     * field names as a blacklist of fields to exclude.
+     *
+     * <p>
+     * {@code
+     * KvList<String> objects =
+     *         client.listCollection("someCollection")
+     *               .withoutFields("value.name.first,value.name.last")
+     *               .get(String.class)
+     *               .get();
+     * }
+     * </p>
+     *
+     * @param withoutFields The comma separated list of fully-qualified field names to reject.
+     * @return This request.
+     */
+    public KvListResource withoutFields(final String withoutFields) {
+        this.withoutFields = checkNotNull(withoutFields, "withoutFields");
         return this;
     }
 
