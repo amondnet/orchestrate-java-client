@@ -311,7 +311,7 @@ public class RelationshipResource extends BaseResource {
      * @param properties A json object representing the properties of this relationship.
      * @return A prepared create request.
      */
-    public OrchestrateRequest<RelationshipMetadata> put(final String relation, final @NonNull Object properties) {
+    public OrchestrateRequest<RelationshipMetadata> put(final String relation, final Object properties) {
         HttpContent packet = prepareCreateRelationship(relation, properties);
         return new OrchestrateRequest<RelationshipMetadata>(client, packet, new ResponseConverter<RelationshipMetadata>() {
             @Override
