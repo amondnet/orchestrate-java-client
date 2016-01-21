@@ -51,12 +51,17 @@ public abstract class BaseClientTest {
 
     @BeforeClass
     public static void setUpClass() {
-        final String apiKey = System.getProperty("orchestrate.apiKey");
+        final String apiKey = System.getenv("ORCHESTRATE_API_KEY");
         if (apiKey == null || apiKey.length() < 1) {
-            throw new IllegalStateException("Cannot run integration tests, 'apiKey' is blank.");
+            throw new IllegalStateException(
+                    "Cannot run integration tests, the environment variable 'ORCHESTRATE_API_KEY' is blank.");
         }
 
-        URI uri = URI.create(System.getProperty("orchestrate.host", OrchestrateClient.Builder.DEFAULT_HOST));
+        String orchestrate_api_endpoint = System.getenv("ORCHESTRATE_API_ENDPOINT");
+        if (orchestrate_api_endpoint == null || orchestrate_api_endpoint.length() < 1)
+            orchestrate_api_endpoint = OrchestrateClient.Builder.DEFAULT_HOST;
+
+        URI uri = URI.create(orchestrate_api_endpoint);
 
         String host = uri.getScheme()+"://" + uri.getHost();
         int port = uri.getPort();
