@@ -161,8 +161,13 @@ It is recommended to run Gradle with the
 #### Running Integration Tests
 
 To run integration tests you'll need to create an application in the Orchestrate
- [Dashboard](https://dashboard.orchestrate.io/), then put the API key into the
- `gradle.properties` as the value for the property `orchestrate.apiKey`.
+ [Dashboard](https://dashboard.orchestrate.io/), and set the appropriate environment variables:
+
+ ```
+ $ export ORCHESTRATE_API_KEY="Enter API key HERE"
+ # Optionally set a custom endpoint
+ $ export ORCHESTRATE_API_ENDPOINT="https://api.ctl-uc1-a.orchestrate.io"
+ ```
 
 Once you've configured the build system with an API key, it will create the
  `oio-client-integration-tests` collection when you run integration tests with
