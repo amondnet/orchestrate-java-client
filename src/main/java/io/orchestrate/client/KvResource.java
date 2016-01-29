@@ -61,6 +61,30 @@ public class KvResource extends BaseResource {
     }
 
     /**
+     * Store an object by key to the Orchestrate service as part of a bulk operation.
+     *
+     * <p>Usage:</p>
+     * <pre>
+     * {@code
+     * client.bulk()
+     *   .add(client.kv("someCollection", "key1").bulkPut(obj))
+     *   .add(client.kv("someCollection", "key2").bulkPut(obj))
+     *   .add(...)
+     *   .done();
+     * }
+     * </pre>
+     *
+     * @param value The object to store.
+     * @return The bulk operation.
+     *
+     * @see #put(Object)
+     * @see Client#bulk()
+     */
+    public BulkOperation bulkPut(final @NonNull Object value) {
+        return BulkOperation.forKvItem(collection, key, value);
+    }
+
+    /**
      * {@link #delete(boolean)}.
      * @return The prepared delete request.
      */

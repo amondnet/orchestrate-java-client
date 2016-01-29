@@ -188,6 +188,12 @@ public class OrchestrateClient implements Client {
 
     /** {@inheritDoc} */
     @Override
+    public BulkResource bulk() {
+        return new BulkResource(this, builder.mapper);
+    }
+
+    /** {@inheritDoc} */
+    @Override
     public void close() throws IOException {
         if (transport != null && !transport.isStopped()) {
             transport.shutdownNow();

@@ -76,6 +76,51 @@ public class RelationshipResource extends BaseResource {
     }
 
     /**
+     * Store a relationship between two objects in the Orchestrate service as part of a bulk operation.
+     *
+     * <p>Usage:</p>
+     * <pre>
+     * {@code
+     * client.bulk()
+     *   .add(client.relationship("someCollection", "key1").to("someCollection", "key2").bulkPut("someRelationship"))
+     *   .add(...)
+     *   .done();
+     * }
+     * </pre>
+     * @param relation The name of the relationship.
+     * @return The bulk operation.
+     *
+     * @see #put(String)
+     * @see Client#bulk()
+     */
+    public BulkOperation bulkPut(final String relation) {
+        return BulkOperation.forRelationship(sourceCollection, sourceKey, destCollection, destKey, relation, null);
+    }
+
+    /**
+     * Store a relationship between two objects in the Orchestrate service as part of a bulk operation.
+     *
+     * <p>Usage:</p>
+     * <pre>
+     * {@code
+     * client.bulk()
+     *   .add(client.relationship("someCollection", "key1").to("someCollection", "key2").bulkPut("someRelationship", obj))
+     *   .add(...)
+     *   .done();
+     * }
+     * </pre>
+     * @param relation The name of the relationship.
+     * @param properties A json object representing the properties of this relationship.
+     * @return the bulk operation.
+     *
+     * @see #put(String, Object)
+     * @see Client#bulk()
+     */
+    public BulkOperation bulkPut(final String relation, final Object properties) {
+        return BulkOperation.forRelationship(sourceCollection, sourceKey, destCollection, destKey, relation, properties);
+    }
+
+    /**
      * Equivalent to {@code this.ifAbsent(Boolean.TRUE)}.
      *
      * @return This RelationshipResource.
@@ -188,7 +233,7 @@ public class RelationshipResource extends BaseResource {
      * <p>Usage:</p>
      * <pre>
      * {@code
-     * RelationList<String> relatedObjects =
+     * RelationshipList<String> relatedObjects =
      *         client.relationship("someCollection", "someKey")
      *               .get(String.class, "someRelation")
      *               .get();
