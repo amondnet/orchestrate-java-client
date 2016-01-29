@@ -23,6 +23,25 @@ import java.io.IOException;
 public interface Client {
 
     /**
+     * The resource for the bulk features in the Orchestrate API.
+     *
+     * <p>Usage:</p>
+     * <pre>
+     * {@code
+     * client.bulk()
+     *   .add(client.kv("someCollection", "key1").bulkPut(obj))
+     *   .add(client.event("someCollection", "key1").type("someEvent").bulkCreate(obj))
+     *   .add(client.relationship("someCollection", "key1").to("someCollection", "key2").bulkPut("someRelationship"))
+     *   .add(...)
+     *   .done();
+     * }
+     * </pre>
+     *
+     * @return The bulk resource.
+     */
+    public BulkResource bulk();
+
+    /**
      * Stops the thread pool and closes all connections in use by all the
      * operations.
      *

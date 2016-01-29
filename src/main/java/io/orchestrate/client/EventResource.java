@@ -68,6 +68,19 @@ public class EventResource extends BaseResource {
     }
 
     /**
+     * Add an event to a key in the Orchestrate service as part of a bulk operation.
+     *
+     * @param value The object to store as the event.
+     * @return The bulk operation
+     *
+     * @see #create(Object)
+     * @see Client#bulk()
+     */
+    public BulkOperation bulkCreate(final @NonNull Object value) {
+        return BulkOperation.forEvent(this.collection, this.key, this.type, this.timestamp, value);
+    }
+
+    /**
      * Fetch events for a key in the Orchestrate service.
      *
      * <p>Usage:</p>

@@ -25,6 +25,15 @@ import java.io.IOException;
  * Orchestrate.
  */
 final class ResponseConverterUtil {
+    static ItemKind parseItemKind(String kindText) {
+        ItemKind kind;
+        try {
+            kind = ItemKind.fromJson(kindText);
+        } catch (Exception e) {
+            throw new IllegalStateException(String.format("Unknown kind '%s', cannot parse response.", kindText));
+        }
+        return kind;
+    }
 
     static <T> KvObject<T> wrapperJsonToKvObject(
             final ObjectMapper mapper, final JsonNode jsonNode, final Class<T> clazz)
@@ -37,14 +46,7 @@ final class ResponseConverterUtil {
         // {"collection":"coll","key":"aKey","ref":"someRef"}
         final JsonNode path = jsonNode.get("path");
 
-        String kindText = path.get("kind").asText();
-        ItemKind kind = null;
-        try {
-            kind = ItemKind.fromJson(kindText);
-        } catch (Exception e) {
-            throw new IllegalStateException(String.format("Unknown kind '%s', cannot parse as a KvObject.", kindText));
-        }
-
+        ItemKind kind = parseItemKind(path.get("kind").asText());
         if (kind.equals(ItemKind.EVENT)) {
             return wrapperJsonToEvent(mapper, jsonNode, clazz);
         } else if (kind.equals(ItemKind.RELATIONSHIP)) {
