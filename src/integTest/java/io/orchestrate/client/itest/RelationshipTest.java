@@ -23,6 +23,7 @@ import org.junit.contrib.theories.Theories;
 import org.junit.contrib.theories.Theory;
 import org.junit.runner.RunWith;
 
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -31,8 +32,9 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.Matchers.isEmptyString;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeThat;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * {@link io.orchestrate.client.OrchestrateClient}.
@@ -134,6 +136,57 @@ public final class RelationshipTest extends BaseClientTest {
         assertEquals(kvMetadata2.getKey(), kvObject.getKey());
         assertEquals(kvMetadata2.getRef(), kvObject.getRef());
         assertEquals("{}", kvObject.getValue());
+    }
+
+    @Test
+    public void listRelationshipsAndApplyWhitelistFieldFiltering() throws InterruptedException, IOException {
+
+        final String json = "{`foo`:`bar`,`bing`:`bong`,`zip`:`zap`}".replace('`', '"');
+        final KvMetadata kvMetadata1 = insertItem("key1", json);
+        final KvMetadata kvMetadata2 = insertItem("key2", json);
+
+        client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+            .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
+            .put("relation")
+            .get();
+
+        Iterable<KvObject<ObjectNode>> listResults = client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+            .withFields("value.foo")
+            .get(ObjectNode.class, "relation")
+            .get();
+
+        JsonNode resultJson = listResults.iterator().next().getValue();
+        assertEquals("bar", resultJson.get("foo").asText());
+        assertFalse(resultJson.has("bing"));
+        assertFalse(resultJson.has("zip"));
+    }
+
+    @Test
+    public void listRelationshipsAndApplyBlacklistFieldFiltering() throws InterruptedException, IOException {
+
+        final String json = "{`foo`:`bar`,`bing`:`bong`,`zip`:`zap`}".replace('`', '"');
+        final KvMetadata kvMetadata1 = insertItem("key1", json);
+        final KvMetadata kvMetadata2 = insertItem("key2", json);
+
+        client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+            .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
+            .put("relation")
+            .get();
+
+        client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+            .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
+            .put("relation")
+            .get();
+
+        Iterable<KvObject<ObjectNode>> listResults = client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+            .withoutFields("value.foo")
+            .get(ObjectNode.class, "relation")
+            .get();
+
+        JsonNode resultJson = listResults.iterator().next().getValue();
+        assertEquals("bong", resultJson.get("bing").asText());
+        assertEquals("zap", resultJson.get("zip").asText());
+        assertFalse(resultJson.has("foo"));
     }
 
     public void listRelationshipsAsync(@ForAll(sampleSize=10) final String relation)
@@ -473,6 +526,58 @@ public final class RelationshipTest extends BaseClientTest {
 
         final KvObject<String> kvObject2 = results2.iterator().next();
         assertNotNull(kvObject2);
+    }
+
+    @Test
+    public void getRelationshipAndApplyWhitelistFieldFiltering() throws InterruptedException, IOException {
+
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
+
+        final JsonNode properties = MAPPER.readTree(
+            "{`foo`:`bar`,`bing`:`bong`,`zip`:`zap`}".replace('`', '"')
+        );
+
+        client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+            .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
+            .put("relation", properties)
+            .get();
+
+        Relationship<JsonNode> getResult = client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+            .withFields("value.foo")
+            .get(JsonNode.class, "relation", kvMetadata2.getCollection(), kvMetadata2.getKey())
+            .get();
+
+        JsonNode resultJson = getResult.getValue();
+        assertEquals("bar", resultJson.get("foo").asText());
+        assertFalse(resultJson.has("bing"));
+        assertFalse(resultJson.has("zip"));
+    }
+
+    @Test
+    public void getRelationshipAndApplyBlacklistFieldFiltering() throws InterruptedException, IOException {
+
+        final KvMetadata kvMetadata1 = insertItem("key1", "{}");
+        final KvMetadata kvMetadata2 = insertItem("key2", "{}");
+
+        final JsonNode properties = MAPPER.readTree(
+            "{`foo`:`bar`,`bing`:`bong`,`zip`:`zap`}".replace('`', '"')
+        );
+
+        client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+            .to(kvMetadata2.getCollection(), kvMetadata2.getKey())
+            .put("relation", properties)
+            .get();
+
+        Relationship<JsonNode> getResult = client.relationship(kvMetadata1.getCollection(), kvMetadata1.getKey())
+            .withoutFields("value.foo")
+            .get(JsonNode.class, "relation", kvMetadata2.getCollection(), kvMetadata2.getKey())
+            .get();
+
+        JsonNode resultJson = getResult.getValue();
+        assertEquals("bong", resultJson.get("bing").asText());
+        assertEquals("zap", resultJson.get("zip").asText());
+        assertFalse(resultJson.has("foo"));
     }
 
 }

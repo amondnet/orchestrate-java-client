@@ -15,6 +15,7 @@
  */
 package io.orchestrate.client.itest;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.pholser.junit.quickcheck.ForAll;
 import io.orchestrate.client.*;
 import org.glassfish.grizzly.utils.DataStructures;
@@ -23,6 +24,7 @@ import org.junit.contrib.theories.Theories;
 import org.junit.contrib.theories.Theory;
 import org.junit.runner.RunWith;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -30,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.Matchers.isEmptyString;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeThat;
 
 /**
@@ -61,6 +62,52 @@ public final class KvListTest extends BaseClientTest {
         assertEquals(kvMetadata.getKey(), kvObject.getKey());
         assertEquals(kvMetadata.getRef(), kvObject.getRef());
         assertEquals("{}", kvObject.getValue());
+    }
+
+    @Test
+    public void listItemsAndApplyWhitelistFieldFiltering() throws InterruptedException, IOException {
+        String key = Long.toHexString(RAND.nextLong());
+        KvMetadata kvMetadata = insertItem(key, "{`foo`:`bar`,`bing`:`bong`,`zip`:`zap`}");
+
+        KvList<JsonNode> kvList = client.listCollection(kvMetadata.getCollection())
+            .limit(1)
+            .withFields("value.foo")
+            .get(JsonNode.class)
+            .get();
+
+        assertNotNull(kvMetadata);
+        assertNotNull(kvList);
+        assertTrue(kvList.iterator().hasNext());
+
+        KvObject<JsonNode> kvObject = kvList.iterator().next();
+
+        JsonNode resultJson = kvObject.getValue();
+        assertEquals("bar", resultJson.get("foo").asText());
+        assertFalse(resultJson.has("bing"));
+        assertFalse(resultJson.has("zip"));
+    }
+
+    @Test
+    public void listItemsAndApplyBlacklistFieldFiltering() throws InterruptedException, IOException {
+        String key = Long.toHexString(RAND.nextLong());
+        KvMetadata kvMetadata = insertItem(key, "{`foo`:`bar`,`bing`:`bong`,`zip`:`zap`}");
+
+        KvList<JsonNode> kvList = client.listCollection(kvMetadata.getCollection())
+            .limit(1)
+            .withoutFields("value.foo")
+            .get(JsonNode.class)
+            .get();
+
+        assertNotNull(kvMetadata);
+        assertNotNull(kvList);
+        assertTrue(kvList.iterator().hasNext());
+
+        KvObject<JsonNode> kvObject = kvList.iterator().next();
+
+        JsonNode resultJson = kvObject.getValue();
+        assertEquals("bong", resultJson.get("bing").asText());
+        assertEquals("zap", resultJson.get("zip").asText());
+        assertFalse(resultJson.has("foo"));
     }
 
     @Theory

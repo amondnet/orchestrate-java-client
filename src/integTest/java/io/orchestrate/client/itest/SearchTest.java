@@ -379,6 +379,42 @@ public final class SearchTest extends BaseClientTest {
     }
 
     @Test
+    public void searchItemsAndApplyWhitelistFieldFiltering() throws InterruptedException, IOException {
+        String key = Long.toHexString(RAND.nextLong());
+        insertItem(key, "{`foo`:`bar`,`bing`:`bong`,`zip`:`zap`}");
+
+        final SearchResults<JsonNode> results = search()
+                .withFields("value.foo")
+                .get(JsonNode.class, "*")
+                .get();
+
+        assertEquals(1, results.getTotalCount());
+
+        JsonNode resultJson = toList(results).get(0).getKvObject().getValue();
+        assertEquals("bar", resultJson.get("foo").asText());
+        assertFalse(resultJson.has("bing"));
+        assertFalse(resultJson.has("zip"));
+    }
+
+    @Test
+    public void searchItemsAndApplyBlacklistFieldFiltering() throws InterruptedException, IOException {
+        String key = Long.toHexString(RAND.nextLong());
+        insertItem(key, "{`foo`:`bar`,`bing`:`bong`,`zip`:`zap`}");
+
+        final SearchResults<JsonNode> results = search()
+                .withoutFields("value.foo")
+                .get(JsonNode.class, "*")
+                .get();
+
+        assertEquals(1, results.getTotalCount());
+
+        JsonNode resultJson = toList(results).get(0).getKvObject().getValue();
+        assertEquals("bong", resultJson.get("bing").asText());
+        assertEquals("zap", resultJson.get("zip").asText());
+        assertFalse(resultJson.has("foo"));
+    }
+
+    @Test
     public void searchItemsPojo() throws InterruptedException, IOException {
         String collection = collection();
         int numValues = 5;

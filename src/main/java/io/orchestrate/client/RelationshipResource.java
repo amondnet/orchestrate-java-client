@@ -58,6 +58,10 @@ public class RelationshipResource extends BaseResource {
     private int limit;
     /** The offset to start graph results at. */
     private int offset;
+    /** The fully-qualified names of fields to select when filtering the result JSON */
+    private String withFields;
+    /** The fully-qualified names of fields to reject when filtering the result JSON */
+    private String withoutFields;
 
     RelationshipResource(final OrchestrateClient client,
             final JacksonMapper mapper,
@@ -73,6 +77,8 @@ public class RelationshipResource extends BaseResource {
         this.objectRef = null;
         this.limit = 10;
         this.offset = 0;
+        this.withFields = null;
+        this.withoutFields = null;
     }
 
     /**
@@ -182,10 +188,20 @@ public class RelationshipResource extends BaseResource {
         checkNotNullOrEmpty(destKey, "destKey");
 
         final String uri = client.uri(sourceCollection, sourceKey, "relation", relation, destCollection, destKey);
-
-        final HttpContent packet = HttpRequestPacket.builder()
+        final HttpRequestPacket.Builder httpHeaderBuilder = HttpRequestPacket.builder()
                 .method(Method.GET)
-                .uri(uri)
+                .uri(uri);
+
+        String query = "";
+        if (withFields != null) {
+            query = query.concat("&with_fields=").concat(client.encode(withFields));
+        }
+        if (withoutFields != null) {
+            query = query.concat("&without_fields=").concat(client.encode(withoutFields));
+        }
+        httpHeaderBuilder.query(query);
+
+        final HttpContent packet = httpHeaderBuilder
                 .build()
                 .httpContentBuilder()
                 .build();
@@ -255,8 +271,15 @@ public class RelationshipResource extends BaseResource {
 
         final String uri = client.uri(sourceCollection, sourceKey, "relations").concat("/" + client.encode(relations));
 
-        final String query = "limit=".concat(limit + "")
+        String query = "limit=".concat(limit + "")
                 .concat("&offset=").concat(offset + "");
+
+        if (withFields != null) {
+            query = query.concat("&with_fields=").concat(client.encode(withFields));
+        }
+        if (withoutFields != null) {
+            query = query.concat("&without_fields=").concat(client.encode(withoutFields));
+        }
 
         final HttpContent packet = HttpRequestPacket.builder()
                 .method(Method.GET)
@@ -543,6 +566,50 @@ public class RelationshipResource extends BaseResource {
      */
     public RelationshipResource offset(final int offset) {
         this.offset = checkNotNegative(offset, "offset");
+        return this;
+    }
+
+    /**
+     * Apply field-filtering to the result JSON, using this list of fully-qualified
+     * field names as a whitelist of fields to include.
+     *
+     * <p>
+     * {@code
+     * Relationship relationship =
+     *         client.relationship("someCollection", "someKey")
+     *               .get("someRelation", "otherCollection", "otherKey")
+     *               .withFields("value.name.first,value.name.last")
+     *               .get();
+     * }
+     * </p>
+     *
+     * @param withFields The comma separated list of fully-qualified field names to select.
+     * @return This request.
+     */
+    public RelationshipResource withFields(final String withFields) {
+        this.withFields = checkNotNull(withFields, "withFields");
+        return this;
+    }
+
+    /**
+     * Apply field-filtering to the result JSON, using this list of fully-qualified
+     * field names as a blacklist of fields to exclude.
+     *
+     * <p>
+     * {@code
+     * Relationship relationship =
+     *         client.relationship("someCollection", "someKey")
+     *               .get("someRelation", "otherCollection", "otherKey")
+     *               .withoutFields("value.name.first,value.name.last")
+     *               .get();
+     * }
+     * </p>
+     *
+     * @param withoutFields The comma separated list of fully-qualified field names to reject.
+     * @return This request.
+     */
+    public RelationshipResource withoutFields(final String withoutFields) {
+        this.withoutFields = checkNotNull(withoutFields, "withoutFields");
         return this;
     }
 

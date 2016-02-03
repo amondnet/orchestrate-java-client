@@ -15,14 +15,17 @@
  */
 package io.orchestrate.client.itest;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.pholser.junit.quickcheck.ForAll;
 import io.orchestrate.client.*;
 import io.orchestrate.client.jsonpatch.JsonPatch;
 import org.glassfish.grizzly.utils.DataStructures;
+import org.junit.Test;
 import org.junit.contrib.theories.Theories;
 import org.junit.contrib.theories.Theory;
 import org.junit.runner.RunWith;
 
+import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -30,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.Matchers.isEmptyString;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeThat;
 
 /**
@@ -586,5 +588,59 @@ public final class EventTest extends BaseClientTest {
 
         assertEquals(eventMetaV1.getRef(), event.getRef());
         assertEquals("{}", event.getValue());
+    }
+
+    @Test
+    public void listEventsAndApplyWhitelistFieldFiltering() throws InterruptedException, IOException {
+
+        String key = Long.toHexString(RAND.nextLong());
+        EventMetadata eventMetadata = client.event(collection(), key)
+            .type("type")
+            .create("{`foo`:`bar`,`bing`:`bong`,`zip`:`zap`}".replace('`', '"'))
+            .get();
+
+        EventList<JsonNode> eventList = client.event(collection(), key)
+            .withFields("value.foo")
+            .type("type")
+            .get(JsonNode.class)
+            .get();
+
+        assertNotNull(eventMetadata);
+        assertNotNull(eventList);
+        assertTrue(eventList.iterator().hasNext());
+
+        Event<JsonNode> eventObject = eventList.iterator().next();
+
+        JsonNode resultJson = eventObject.getValue();
+        assertEquals("bar", resultJson.get("foo").asText());
+        assertFalse(resultJson.has("bing"));
+        assertFalse(resultJson.has("zip"));
+    }
+
+    @Test
+    public void listEventsAndApplyBlacklistFieldFiltering() throws InterruptedException, IOException {
+
+        String key = Long.toHexString(RAND.nextLong());
+        EventMetadata eventMetadata = client.event(collection(), key)
+            .type("type")
+            .create("{`foo`:`bar`,`bing`:`bong`,`zip`:`zap`}".replace('`', '"'))
+            .get();
+
+        EventList<JsonNode> eventList = client.event(collection(), key)
+            .withoutFields("value.foo")
+            .type("type")
+            .get(JsonNode.class)
+            .get();
+
+        assertNotNull(eventMetadata);
+        assertNotNull(eventList);
+        assertTrue(eventList.iterator().hasNext());
+
+        Event<JsonNode> eventObject = eventList.iterator().next();
+
+        JsonNode resultJson = eventObject.getValue();
+        assertEquals("bong", resultJson.get("bing").asText());
+        assertEquals("zap", resultJson.get("zip").asText());
+        assertFalse(resultJson.has("foo"));
     }
 }

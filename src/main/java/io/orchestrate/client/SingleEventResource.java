@@ -35,6 +35,8 @@ public class SingleEventResource extends BaseResource {
     private final String eventType;
     private final Long timestamp;
     private final String ordinal;
+    private final String withFields;
+    private final String withoutFields;
     private String ifMatchRef;
 
     SingleEventResource(final OrchestrateClient client,
@@ -43,7 +45,9 @@ public class SingleEventResource extends BaseResource {
                         final String key,
                         final String eventType,
                         final Long timestamp,
-                        final String ordinal) {
+                        final String ordinal,
+                        final String withFields,
+                        final String withoutFields) {
         super(client, mapper);
         assert (collection != null);
         assert (collection.length() > 0);
@@ -59,6 +63,8 @@ public class SingleEventResource extends BaseResource {
         this.eventType = eventType;
         this.timestamp = timestamp;
         this.ordinal = ordinal;
+        this.withFields = withFields;
+        this.withoutFields = withoutFields;
     }
 
     /**
@@ -80,10 +86,23 @@ public class SingleEventResource extends BaseResource {
     public <T> OrchestrateRequest<Event<T>> get(final Class<T> clazz) {
         final String uri = buildUri();
 
-        final HttpContent packet = HttpRequestPacket.builder()
+        String query = "";
+        if (withFields != null) {
+            query = query.concat("&with_fields=").concat(client.encode(withFields));
+        }
+        if (withoutFields != null) {
+            query = query.concat("&without_fields=").concat(client.encode(withoutFields));
+        }
+
+        final HttpRequestPacket.Builder packetBuilder = HttpRequestPacket.builder()
                 .method(Method.GET)
-                .uri(uri)
-                .build()
+                .uri(uri);
+
+        if (!query.isEmpty()) {
+            packetBuilder.query(query);
+        }
+
+        final HttpContent packet = packetBuilder.build()
                 .httpContentBuilder()
                 .build();
 

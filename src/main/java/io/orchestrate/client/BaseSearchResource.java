@@ -40,6 +40,10 @@ public abstract class BaseSearchResource extends BaseResource {
     private boolean withValues;
     /** The fully-qualified names of fields to sort upon. */
     private String sortFields;
+    /** The fully-qualified names of fields to select when filtering the result JSON */
+    private String withFields;
+    /** The fully-qualified names of fields to reject when filtering the result JSON */
+    private String withoutFields;
     /** The aggregate functions to include in this query. */
     private String aggregateFields;
     /** The 'kinds' to be searched ('item' or 'event') */
@@ -55,6 +59,8 @@ public abstract class BaseSearchResource extends BaseResource {
         this.offset = 0;
         this.withValues = true;
         this.sortFields = null;
+        this.withFields = null;
+        this.withoutFields = null;
         this.aggregateFields = null;
         this.kinds = null;
     }
@@ -134,6 +140,12 @@ public abstract class BaseSearchResource extends BaseResource {
             .append("&values=").append(Boolean.toString(withValues));
         if (sortFields != null) {
             buff.append("&sort=").append(client.encode(sortFields));
+        }
+        if (withFields != null) {
+            buff.append("&with_fields=").append(client.encode(withFields));
+        }
+        if (withoutFields != null) {
+            buff.append("&without_fields=").append(client.encode(withoutFields));
         }
         if (aggregateFields != null) {
             buff.append("&aggregate=").append(client.encode(aggregateFields));
@@ -234,6 +246,48 @@ public abstract class BaseSearchResource extends BaseResource {
      */
     public BaseSearchResource sort(final String sortFields) {
         this.sortFields = checkNotNull(sortFields, "sortFields");
+        return this;
+    }
+
+    /**
+     * Apply field-filtering to the result JSON, using this list of fully-qualified
+     * field names as a whitelist of fields to include.
+     *
+     * <p>
+     * {@code
+     * client.searchCollection("someCollection")
+     *     .withFields("value.name.last,value.name.first")
+     *     .get(String.class, "*")
+     *     .get()
+     * }
+     * </p>
+     *
+     * @param withFields The comma separated list of fully-qualified field names to select.
+     * @return This request.
+     */
+    public BaseSearchResource withFields(final String withFields) {
+        this.withFields = checkNotNull(withFields, "withFields");
+        return this;
+    }
+
+    /**
+     * Apply field-filtering to the result JSON, using this list of fully-qualified
+     * field names as a blacklist of fields to exclude.
+     *
+     * <p>
+     * {@code
+     * client.searchCollection("someCollection")
+     *     .withoutFields("value.name.last,value.name.first")
+     *     .get(String.class, "*")
+     *     .get()
+     * }
+     * </p>
+     *
+     * @param withoutFields The comma separated list of fully-qualified field names to reject.
+     * @return This request.
+     */
+    public BaseSearchResource withoutFields(final String withoutFields) {
+        this.withoutFields = checkNotNull(withoutFields, "withoutFields");
         return this;
     }
 
