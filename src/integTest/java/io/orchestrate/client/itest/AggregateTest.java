@@ -44,9 +44,9 @@ public final class AggregateTest extends BaseClientTest {
 
     @Test
     public void testTopValuesAggregate() throws InterruptedException {
-        insertItem("key0", "{`a`:1}");
-        insertItem("key1", "{`a`:1}");
-        insertItem("key2", "{`a`:1}");
+        insertItem("key0", "{`a`:1.0}");
+        insertItem("key1", "{`a`:1.0}");
+        insertItem("key2", "{`a`:1.0}");
         insertItem("key3", "{`a`:`monkey`}");
         insertItem("key4", "{`a`:`monkey`}");
         insertItem("key5", "{`a`:`monkey`}");
@@ -71,9 +71,9 @@ public final class AggregateTest extends BaseClientTest {
 
     @Test
     public void testTopValuesAggregateWithOffsetAndLimit() throws InterruptedException {
-        insertItem("key0", "{`a`:1}");
-        insertItem("key1", "{`a`:1}");
-        insertItem("key2", "{`a`:1}");
+        insertItem("key0", "{`a`:1.0}");
+        insertItem("key1", "{`a`:1.0}");
+        insertItem("key2", "{`a`:1.0}");
         insertItem("key3", "{`a`:`monkey`}");
         insertItem("key4", "{`a`:`monkey`}");
         insertItem("key5", "{`a`:`monkey`}");
