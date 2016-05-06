@@ -43,8 +43,7 @@ public interface KvMetadata {
     /**
      * Returns the reftime of this metadata. This may be null if reftime is not available (for example, if the
      * KvMetadata is parsed from a Location header after a CREATE request where the refime is not presented). Reftime
-     * is only present on search results or object listing queries. It is NOT present on create responses or individual
-     * GET requests.
+     * is only present on search results or object listing queries. It is NOT present on create responses.
      * @return The reftime for this metadata.
      */
     Long getReftime();

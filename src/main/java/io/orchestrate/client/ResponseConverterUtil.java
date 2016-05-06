@@ -93,7 +93,7 @@ final class ResponseConverterUtil {
     }
 
     public static <T> KvObject<T> jsonToKvObject(ObjectMapper mapper, String rawValue, Class<T> clazz,
-                                                 String collection, String key, String ref) throws IOException {
+                                                 String collection, String key, String ref, long reftime) throws IOException {
         assert (mapper != null);
         assert (clazz != null);
 
@@ -104,7 +104,7 @@ final class ResponseConverterUtil {
 
         final T value = jsonToDomainObject(mapper, valueNode, rawValue, clazz);
 
-        return new KvObject<T>(collection, key, ref, null, mapper, value, valueNode, rawValue);
+        return new KvObject<T>(collection, key, ref, reftime, mapper, value, valueNode, rawValue);
     }
 
     @SuppressWarnings("unchecked")

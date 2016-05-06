@@ -28,6 +28,10 @@ import org.glassfish.grizzly.utils.BufferInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 /**
  * The base resource for features in the Orchestrate API.
@@ -41,6 +45,7 @@ abstract class BaseResource {
 
     protected final JacksonMapper jacksonMapper;
     private static final Charset UTF8 = Charset.forName("UTF-8");
+    private static final SimpleDateFormat lastModifiedFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
 
     BaseResource(final OrchestrateClient client, final JacksonMapper mapper) {
         assert (client != null);
@@ -84,8 +89,14 @@ abstract class BaseResource {
         final String ref = response.getHttpHeader().getHeader(Header.ETag)
                 .replace("\"", "")
                 .replaceFirst("-gzip$", "");
+        Long reftime = null;
+        try {
+            reftime = lastModifiedFormat.parse(response.getHttpHeader().getHeader(Header.LastModified)).getTime();
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
 
-        return ResponseConverterUtil.jsonToKvObject(mapper, rawValue, clazz, collection, key, ref);
+        return ResponseConverterUtil.jsonToKvObject(mapper, rawValue, clazz, collection, key, ref,reftime);
     }
 
     protected <T> OrchestrateRequest<T> parseLink(String name, JsonNode jsonNode, ResponseConverter<T> clazz) {
