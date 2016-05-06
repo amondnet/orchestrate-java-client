@@ -32,16 +32,19 @@ public class SearchResults<T> implements Iterable<Result<T>> {
 
     /** The results of this search. */
     private final List<Result<T>> results;
+    /** The results of this search. */
+    private final long reftime;
     /** The total number of search results. */
     private final int totalCount;
     /** The aggregate results associated with this search. */
     private final List<AggregateResult> aggregates;
 
+
     private final OrchestrateRequest<SearchResults<T>> next;
     private final OrchestrateRequest<SearchResults<T>> prev;
 
     SearchResults(final List<Result<T>> results, final int totalCount, final List<AggregateResult> aggregates,
-          final OrchestrateRequest<SearchResults<T>> next, final OrchestrateRequest<SearchResults<T>> prev) {
+          final OrchestrateRequest<SearchResults<T>> next, final OrchestrateRequest<SearchResults<T>> prev, final long reftime) {
         assert (results != null);
         assert (totalCount >= 0);
 
@@ -50,6 +53,7 @@ public class SearchResults<T> implements Iterable<Result<T>> {
         this.aggregates = aggregates;
         this.next = next;
         this.prev = prev;
+        this.reftime  = reftime;
     }
 
     /**
@@ -128,5 +132,15 @@ public class SearchResults<T> implements Iterable<Result<T>> {
      */
     public boolean hasPrev() {
         return prev != null;
+    }
+
+
+    /**
+     * Returns the reftime of search results.
+     *
+     * @return The number of search results.
+     */
+    public long getReftime() {
+        return reftime;
     }
 }

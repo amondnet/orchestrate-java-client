@@ -171,6 +171,7 @@ public abstract class BaseSearchResource extends BaseResource {
                 final int totalCount = jsonNode.get("total_count").asInt();
                 final int count = jsonNode.get("count").asInt();
                 final List<Result<T>> results = new ArrayList<Result<T>>(count);
+                final long reftime = jsonNode.get("reftime").asLong();
 
                 List<AggregateResult> aggregates = Collections.emptyList();
                 if (jsonNode.has("aggregates")) {
@@ -197,7 +198,7 @@ public abstract class BaseSearchResource extends BaseResource {
                 final OrchestrateRequest<SearchResults<T>> next = parseLink("next", jsonNode, this);
                 final OrchestrateRequest<SearchResults<T>> prev = parseLink("prev", jsonNode, this);
 
-                return new SearchResults<T>(results, totalCount, aggregates, next, prev);
+                return new SearchResults<T>(results, totalCount, aggregates, next, prev, reftime);
             }
         });
     }
