@@ -161,6 +161,7 @@ public final class KvTest extends BaseClientTest {
         assertEquals("bar", resultJson.get("foo").asText());
         assertFalse(resultJson.has("bing"));
         assertFalse(resultJson.has("zip"));
+
     }
 
     @Test
