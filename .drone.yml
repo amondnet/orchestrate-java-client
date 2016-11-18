@@ -3,6 +3,7 @@ build:
   commands:
     - ./gradlew --quiet --no-color --no-search-upward --info test
 
+
 publish:
   github_release:
     api_key: e0b0f533e83402d5aae7c9de5d42ac3ec0bb024a
