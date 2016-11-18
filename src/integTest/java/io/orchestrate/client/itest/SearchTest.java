@@ -44,6 +44,7 @@ public final class SearchTest extends BaseClientTest {
         final KvMetadata kvMetadata = insertItem("key", "{}");
 
         final SearchResults<String> results = search("*", 1);
+        assertNotNull(results.getReftime());
 
         final Result<String> result = results.iterator().next();
         assertNotNull(result);
