@@ -10,3 +10,8 @@ publish:
     files: build/*
     checksum: sha1
 
+notify:
+  slack:
+    webhook_url: https://hooks.slack.com/services/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
+    channel: x-build
+    username: drone
